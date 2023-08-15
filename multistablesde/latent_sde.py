@@ -44,7 +44,6 @@ from models.energy_balance import StochasticEnergyBalance
 from models.fitzhugh_nagumo import FitzHughNagumo
 
 
-
 class LinearScheduler(object):
     def __init__(self, iters, maxval=1.0):
         self._iters = max(1, iters)
@@ -133,7 +132,7 @@ class LatentSDE(nn.Module):
         out = [g_net_i(y_i) for (g_net_i, y_i) in zip(self.g_nets, y)]
         return torch.cat(out, dim=1)
 
-    def forward(self, xs, ts, noise_std, adjoint=False, method="euler_heun"):
+    def forward(self, xs, ts, noise_std, adjoint=False, method="euler_heun", dt=1e-2):
         # Contextualization is only needed for posterior inference.
         ctx = self.encoder(torch.flip(xs, dims=(0,)))
         ctx = torch.flip(ctx, dims=(0,))
@@ -155,13 +154,13 @@ class LatentSDE(nn.Module):
                 z0,
                 ts,
                 adjoint_params=adjoint_params,
-                dt=1e-2,
+                dt=dt,
                 logqp=True,
                 method=method,
             )
         else:
             zs, log_ratio = torchsde.sdeint(
-                self, z0, ts, dt=1e-2, logqp=True, method=method
+                self, z0, ts, dt=dt, logqp=True, method=method
             )
 
         _xs = self.projector(zs)
@@ -186,7 +185,7 @@ class LatentSDE(nn.Module):
         return _xs
 
     @torch.no_grad()
-    def posterior_plot(self, xs, ts, adjoint=False, method="euler_heun"):
+    def posterior_plot(self, xs, ts, dt=1e-2, adjoint=False, method="euler_heun"):
         # Contextualization is only needed for posterior inference.
         ctx = self.encoder(torch.flip(xs, dims=(0,)))
         ctx = torch.flip(ctx, dims=(0,))
@@ -208,13 +207,13 @@ class LatentSDE(nn.Module):
                 z0,
                 ts,
                 adjoint_params=adjoint_params,
-                dt=1e-2,
+                dt=dt,
                 logqp=True,
                 method=method,
             )
         else:
             zs, log_ratio = torchsde.sdeint(
-                self, z0, ts, dt=1e-2, logqp=True, method=method
+                self, z0, ts, dt=dt, logqp=True, method=method
             )
 
         _xs = self.projector(zs)
@@ -225,7 +224,9 @@ def steps(t0, t1, dt):
     return math.ceil((t1 - t0) / dt)
 
 
-def make_dataset(model, t0, t1, t1_extrapolated, dt, batch_size, noise_std, train_dir, device):
+def make_dataset(
+    model, t0, t1, t1_extrapolated, dt, batch_size, noise_std, train_dir, device
+):
     data_path = os.path.join(train_dir, "data.pth")
 
     steps_train = steps(t0, t1, dt)
@@ -235,27 +236,33 @@ def make_dataset(model, t0, t1, t1_extrapolated, dt, batch_size, noise_std, trai
     ts_extrapolated = torch.linspace(
         t0, t1_extrapolated, steps=steps_extrapolated, device=device
     )
-    
+
     models = {
         "energy": StochasticEnergyBalance(),
         "fitzhugh": FitzHughNagumo(),
     }
 
     xs_extrapolated = models[model].sample(
-        batch_size, ts_extrapolated, noise_std, normalize=True
+        batch_size, ts_extrapolated.to(device), noise_std, normalize=True
     )
     xs_train = xs_extrapolated[0:steps_train, :, :]
 
     os.makedirs(os.path.dirname(data_path), exist_ok=True)
     torch.save(
-        {"ts_train": ts, "ts_extrapolated": ts_extrapolated, "xs": xs_extrapolated, "dt": dt}, data_path
+        {
+            "ts_train": ts,
+            "ts_extrapolated": ts_extrapolated,
+            "xs": xs_extrapolated,
+            "dt": dt,
+        },
+        data_path,
     )
     logging.warning(f"Stored data at: {data_path}")
 
     return xs_train.to(device), ts.to(device).to(device)
 
 
-def vis(xs, ts, latent_sde, bm_vis, img_path, num_samples=100):
+def vis(xs, ts, latent_sde, bm_vis, img_path, num_samples=100, dt=1e-2):
     fig = plt.figure(figsize=(16, 9))
     gs = gridspec.GridSpec(2, 2)
     ax00 = fig.add_subplot(gs[0, 0])
@@ -271,13 +278,15 @@ def vis(xs, ts, latent_sde, bm_vis, img_path, num_samples=100):
     ylim = ax00.get_ylim()
 
     # Right plot: samples from learned model.
-    prior = latent_sde.sample(batch_size=num_samples, ts=ts, bm=bm_vis).cpu().numpy()
+    prior = (
+        latent_sde.sample(batch_size=num_samples, ts=ts, bm=bm_vis, dt=dt).cpu().numpy()
+    )
     ax01.plot(prior[:, :, 0])
     ax01.set_title("Prior", fontsize=20)
     ax01.set_xlim(xlim)
     ax01.set_ylim(ylim)
 
-    posterior, kl = latent_sde.posterior_plot(xs, ts)
+    posterior, kl = latent_sde.posterior_plot(xs, ts, dt=dt)
     ax02.plot(posterior.cpu().numpy()[:, :, 0])
     ax02.set_title("Posterior", fontsize=20)
     ax02.set_xlim(xlim)
@@ -299,18 +308,18 @@ def plot_learning(loss, kl, logpxs, lr, kl_sched, img_path):
     lrp = fig.add_subplot(gs[2, 0])
     kl_schedp = fig.add_subplot(gs[2, 1])
 
-    lossp.set_title("Loss", fontsize=20)
+    lossp.set_title("Loss")
     lossp.plot(loss)
 
-    klp.set_title("KL", fontsize=20)
+    klp.set_title("KL")
     klp.set_yscale("symlog")
     klp.plot(kl)
 
-    logpxsp.set_title("Log-Likelihoods", fontsize=20)
+    logpxsp.set_title("Log-Likelihoods")
     logpxsp.set_yscale("symlog")
     logpxsp.plot(logpxs)
 
-    lrp.set_title("Learning Rate", fontsize=20)
+    lrp.set_title("Learning Rate")
     lrp.set_yscale("symlog")
     lrp.plot(lr)
 
@@ -337,7 +346,7 @@ def main(
     adjoint=False,
     train_dir="./dump/",
     method="euler_heun",
-    viz_samples=100,
+    viz_samples=30,
     beta=1.0,
     dt=0.01,
     model="energy",
@@ -388,7 +397,7 @@ def main(
 
     for global_step in tqdm.tqdm(range(1, num_iters + 1)):
         latent_sde.zero_grad()
-        log_pxs, log_ratio = latent_sde(xs, ts, noise_std, adjoint, method)
+        log_pxs, log_ratio = latent_sde(xs, ts, noise_std, adjoint, method, dt=dt)
         loss = -log_pxs + log_ratio * kl_scheduler.val
         loss.backward()
         optimizer.step()
@@ -406,7 +415,7 @@ def main(
         recorded_lr.append(float(lr_now))
         recorded_kl_sched.append(float(kl_scheduler.val))
 
-        if global_step % pause_every == 1:
+        if (global_step % pause_every == 0 and global_step != 0) or global_step == 1:
             img_path = os.path.join(train_dir, f"{global_step:06d}_model.pdf")
             vis(
                 xs[:, 0:30, :],
@@ -415,6 +424,7 @@ def main(
                 bm_vis,
                 img_path,
                 num_samples=viz_samples,
+                dt=dt,
             )
             img_path2 = os.path.join(train_dir, f"{global_step:06d}_train.pdf")
             plot_learning(

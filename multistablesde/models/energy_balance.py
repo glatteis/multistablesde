@@ -1,6 +1,7 @@
 import torch
 import torchsde
 
+
 class StochasticEnergyBalance(object):
     noise_type = "diagonal"
     sde_type = "stratonovich"
