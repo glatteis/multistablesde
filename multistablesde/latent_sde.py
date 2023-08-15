@@ -41,6 +41,8 @@ from torch.distributions import Normal
 import torchsde
 
 from models.energy_balance import StochasticEnergyBalance
+from models.fitzhugh_nagumo import FitzHughNagumo
+
 
 
 class LinearScheduler(object):
@@ -223,21 +225,24 @@ def steps(t0, t1, dt):
     return math.ceil((t1 - t0) / dt)
 
 
-def make_dataset(t0, t1, t1_extrapolated, dt, batch_size, noise_std, train_dir, device):
-    data_path = os.path.join(train_dir, "bistable_data.pth")
+def make_dataset(model, t0, t1, t1_extrapolated, dt, batch_size, noise_std, train_dir, device):
+    data_path = os.path.join(train_dir, "data.pth")
 
     steps_train = steps(t0, t1, dt)
     steps_extrapolated = steps(t0, t1_extrapolated, dt)
-
-    _y0 = (torch.randn(batch_size, 1, device=device) * 20.0) + 270.0
 
     ts = torch.linspace(t0, t1, steps=steps_train, device=device)
     ts_extrapolated = torch.linspace(
         t0, t1_extrapolated, steps=steps_extrapolated, device=device
     )
+    
+    models = {
+        "energy": StochasticEnergyBalance(),
+        "fitzhugh": FitzHughNagumo(),
+    }
 
-    xs_extrapolated = StochasticEnergyBalance().sample(
-        _y0, ts_extrapolated, noise_std, normalize=True
+    xs_extrapolated = models[model].sample(
+        batch_size, ts_extrapolated, noise_std, normalize=True
     )
     xs_train = xs_extrapolated[0:steps_train, :, :]
 
@@ -335,11 +340,13 @@ def main(
     viz_samples=100,
     beta=1.0,
     dt=0.01,
+    model="energy",
 ):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     sys.setrecursionlimit(1500)
     xs, ts = make_dataset(
+        model=model,
         t0=t0,
         t1=t1,
         t1_extrapolated=t1 * 5.0,

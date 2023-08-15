@@ -1,7 +1,6 @@
 import torch
 import torchsde
 
-
 class StochasticEnergyBalance(object):
     noise_type = "diagonal"
     sde_type = "stratonovich"
@@ -32,10 +31,11 @@ class StochasticEnergyBalance(object):
         return torch.cat([f], dim=1)
 
     @torch.no_grad()
-    def sample(self, x0, ts, noise_std, normalize):
+    def sample(self, batch_size, ts, noise_std, normalize):
+        x0 = (torch.randn(batch_size, 1) * 20.0) + 270.0
         """Sample data for training. Store data normalization constants if necessary."""
         xs = torchsde.sdeint(self, x0, ts)
         if normalize:
             mean, std = torch.mean(xs, dim=(0, 1)), torch.std(xs, dim=(0, 1))
-            xs.sub_(mean).div_(std)  # .add_(torch.randn_like(xs) * noise_std)
+            xs.sub_(mean).div_(std)
         return xs

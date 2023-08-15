@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "57e0de5283f899af932ec850523f33de89c862bda23c97904dd29f485f91924a"
+            "sha256": "a94fad69ab77dcfca00a1d07059b7e5a8fe9ee435608fb3d18e327acb3643fef"
         },
         "pipfile-spec": 6,
         "requires": {},
@@ -555,6 +555,14 @@
             "markers": "python_version >= '3.7'",
             "version": "==2.3.0"
         },
+        "tikzplotlib": {
+            "hashes": [
+                "sha256:93d141342d143804fc1dfabe03e6d4e38e547cf72803bdf124615affdd56f59d",
+                "sha256:bf0451b86fe4db40aa742f7e5a180dfaaadf57c746ddb2ab7e58a5163d8be75f"
+            ],
+            "index": "pypi",
+            "version": "==0.10.1"
+        },
         "torch": {
             "hashes": [
                 "sha256:0882243755ff28895e8e6dc6bc26ebcf5aa0911ed81b2a12f241fc4b09075b13",
@@ -610,6 +618,14 @@
             ],
             "markers": "python_version >= '3.7'",
             "version": "==4.7.1"
+        },
+        "webcolors": {
+            "hashes": [
+                "sha256:29bc7e8752c0a1bd4a1f03c14d6e6a72e93d82193738fa860cbff59d0fcc11bf",
+                "sha256:c225b674c83fa923be93d235330ce0300373d02885cef23238813b0d5668304a"
+            ],
+            "markers": "python_version >= '3.7'",
+            "version": "==1.13"
         }
     },
     "develop": {}

@@ -20,7 +20,6 @@ import torchsde
 # Wildcard import so that imported files find all classes
 from latent_sde import *
 
-
 def draw_marginals(xs_sde, xs_data, file, title):
     bins = np.linspace(-4, 4, 100)
     plt.hist(
@@ -41,15 +40,13 @@ def draw_marginals(xs_sde, xs_data, file, title):
     )
     plt.legend()
     plt.title(f"Marginals, {title}")
-    plt.savefig(file)
+    plt.savefig(file + ".pdf", backend='pgf')
     plt.close()
-
 
 def distance_between_histograms(xs_sde, xs_data):
     values_sde = torch.flatten(xs_sde).numpy()
     values_data = torch.flatten(xs_data).numpy()
     return scipy.stats.wasserstein_distance(values_sde, values_data)
-
 
 def mean(xs):
     return torch.mean(xs, dim=(1, 2))
@@ -80,11 +77,29 @@ def draw_mean_var(ts, xs_sde, xs_data, file, title):
     ax.legend()
     plt.title(f"95% confidence, {title}")
 
-    plt.savefig(file)
+    plt.savefig(file + ".pdf", backend='pgf')
     plt.close()
 
+def draw_posterior_around_data(ts, xs_posterior, xs_datapoint, file, title):
+    fig, ax = plt.subplots()
+    mean_posterior = mean(xs_posterior)
+    conf_posterior = std(xs_posterior) * 1.96
+    
+    ax.plot(ts, mean_posterior, label="Posterior", color="green")
+    ax.fill_between(
+        ts, (mean_posterior - conf_posterior), (mean_posterior + conf_posterior), color="green", alpha=0.1
+    )
+    ax.plot(ts, xs_datapoint[:, 0, 0], label="Data", color="orange", linewidth=2.0)
+    
+    ax.legend()
+    plt.title(f"Posterior around data, {title}")
+    plt.savefig(file + ".pdf", backend="pgf")
+    plt.close()
 
 def main(model=None, data=None, out=None):
+    if out == None:
+        out = model.replace(".pth", "")
+        os.makedirs(out, exist_ok=True)
     latent_sde = torch.load(model, map_location=torch.device("cpu"))
     tsxs_data = torch.load(data, map_location=torch.device("cpu"))
 
@@ -95,7 +110,12 @@ def main(model=None, data=None, out=None):
 
     marginal_size = 1000
     xs_sde_extrapolated = latent_sde.sample(marginal_size, ts_extrapolated, dt=dt)
-    
+    xs_data_extrapolated = tsxs_data["xs"]
+
+    datapoint_extrapolated = xs_data_extrapolated[:, 1:2, :]
+    datapoint_extrapolated_repeated = datapoint_extrapolated.repeat(1, marginal_size, 1)
+    posterior_extrapolated, _ = latent_sde.posterior_plot(datapoint_extrapolated_repeated, ts_extrapolated)
+
     # assumptions: ts_train[0] == 0, ts_train is evenly spaced
     assert ts_train[0] == 0.0
     
@@ -113,14 +133,17 @@ def main(model=None, data=None, out=None):
         xs_data = tsxs_data["xs"][0:interval, :, :]
         xs_sde = xs_sde_extrapolated[0:interval, :, :]
         ts = ts_extrapolated[0:interval]
+        posterior = posterior_extrapolated[0:interval, :, :]
+        datapoint = datapoint_extrapolated[0:interval, :, :]
 
-        draw_marginals(xs_data, xs_sde, f"{out}/marginals_{name}.pdf", title)
+        draw_marginals(xs_data, xs_sde, f"{out}/marginals_{name}", title)
         info_local["wasserstein_distance"] = distance_between_histograms(xs_sde, xs_data)
 
-        draw_mean_var(ts, xs_sde, xs_data, f"{out}/mean_var_{name}.pdf", title)
+        draw_mean_var(ts, xs_sde, xs_data, f"{out}/mean_var_{name}", title)
+
+        draw_posterior_around_data(ts, posterior, datapoint, f"{out}/posterior_{name}", title)
         
         info[name] = info_local
-    
     
     # compute wasserstein distance for entire timeseries
     wasserstein_distances = []
@@ -130,7 +153,7 @@ def main(model=None, data=None, out=None):
         wasserstein_distances.append(distance_between_histograms(xs_sde, xs_data))
     plt.plot(ts_extrapolated[1:], wasserstein_distances)
     plt.title("Wasserstein Distances")
-    plt.savefig(f"{out}/wasserstein.pdf")
+    plt.savefig(f"{out}/wasserstein.pdf", backend='pgf')
     plt.close()
 
     with open(f"{out}/info.json", "w", encoding="utf8") as f:
