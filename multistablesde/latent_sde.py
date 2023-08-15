@@ -243,7 +243,7 @@ def make_dataset(
     }
 
     xs_extrapolated = models[model].sample(
-        batch_size, ts_extrapolated.to(device), noise_std, normalize=True
+        batch_size, ts_extrapolated.to(device), normalize=True, device=device
     )
     xs_train = xs_extrapolated[0:steps_train, :, :]
 

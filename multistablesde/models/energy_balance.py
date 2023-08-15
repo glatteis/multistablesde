@@ -32,8 +32,8 @@ class StochasticEnergyBalance(object):
         return torch.cat([f], dim=1)
 
     @torch.no_grad()
-    def sample(self, batch_size, ts, noise_std, normalize):
-        x0 = (torch.randn(batch_size, 1) * 20.0) + 270.0
+    def sample(self, batch_size, ts, normalize, device):
+        x0 = ((torch.randn(batch_size, 1) * 20.0) + 270.0).to(device)
         """Sample data for training. Store data normalization constants if necessary."""
         xs = torchsde.sdeint(self, x0, ts)
         if normalize:
