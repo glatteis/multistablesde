@@ -1,6 +1,7 @@
 import torch
 import torchsde
 
+
 class StochasticEnergyBalance(object):
     noise_type = "diagonal"
     sde_type = "stratonovich"
@@ -16,7 +17,7 @@ class StochasticEnergyBalance(object):
 
     def energy_in(self, u):
         return (1.0 - self.albedo(u)) * (self.solarconstant / 4.0)
-    
+
     def energy_out(self, u):
         return self.radiation * u**4
 
@@ -36,5 +37,5 @@ class StochasticEnergyBalance(object):
         xs = torchsde.sdeint(self, x0, ts)
         if normalize:
             mean, std = torch.mean(xs, dim=(0, 1)), torch.std(xs, dim=(0, 1))
-            xs.sub_(mean).div_(std)#.add_(torch.randn_like(xs) * noise_std)
+            xs.sub_(mean).div_(std)  # .add_(torch.randn_like(xs) * noise_std)
         return xs

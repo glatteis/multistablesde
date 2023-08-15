@@ -25,6 +25,7 @@ python -m examples.latent_sde_lorenz
 import logging
 import os
 import sys
+import math
 from typing import Sequence
 
 import fire
@@ -40,6 +41,7 @@ from torch.distributions import Normal
 import torchsde
 
 from models.energy_balance import StochasticEnergyBalance
+
 
 class LinearScheduler(object):
     def __init__(self, iters, maxval=1.0):
@@ -74,7 +76,9 @@ class LatentSDE(nn.Module):
     def __init__(self, data_size, latent_size, context_size, hidden_size):
         super(LatentSDE, self).__init__()
         # Encoder.
-        self.encoder = Encoder(input_size=data_size, hidden_size=hidden_size, output_size=context_size)
+        self.encoder = Encoder(
+            input_size=data_size, hidden_size=hidden_size, output_size=context_size
+        )
         self.qz0_net = nn.Linear(context_size, latent_size + latent_size)
 
         # Decoder.
@@ -99,7 +103,7 @@ class LatentSDE(nn.Module):
                     nn.Linear(1, hidden_size),
                     nn.Softplus(),
                     nn.Linear(hidden_size, 1),
-                    nn.Sigmoid()
+                    nn.Sigmoid(),
                 )
                 for _ in range(latent_size)
             ]
@@ -139,13 +143,24 @@ class LatentSDE(nn.Module):
         if adjoint:
             # Must use the argument `adjoint_params`, since `ctx` is not part of the input to `f`, `g`, and `h`.
             adjoint_params = (
-                    (ctx,) +
-                    tuple(self.f_net.parameters()) + tuple(self.g_nets.parameters()) + tuple(self.h_net.parameters())
+                (ctx,)
+                + tuple(self.f_net.parameters())
+                + tuple(self.g_nets.parameters())
+                + tuple(self.h_net.parameters())
             )
             zs, log_ratio = torchsde.sdeint_adjoint(
-                self, z0, ts, adjoint_params=adjoint_params, dt=1e-2, logqp=True, method=method)
+                self,
+                z0,
+                ts,
+                adjoint_params=adjoint_params,
+                dt=1e-2,
+                logqp=True,
+                method=method,
+            )
         else:
-            zs, log_ratio = torchsde.sdeint(self, z0, ts, dt=1e-2, logqp=True, method=method)
+            zs, log_ratio = torchsde.sdeint(
+                self, z0, ts, dt=1e-2, logqp=True, method=method
+            )
 
         _xs = self.projector(zs)
         xs_dist = Normal(loc=_xs, scale=noise_std)
@@ -158,15 +173,16 @@ class LatentSDE(nn.Module):
         return log_pxs, logqp0 + logqp_path
 
     @torch.no_grad()
-    def sample(self, batch_size, ts, bm=None):
-        eps = torch.randn(size=(batch_size, *self.pz0_mean.shape[1:]), device=self.pz0_mean.device)
+    def sample(self, batch_size, ts, bm=None, dt=1e-3):
+        eps = torch.randn(
+            size=(batch_size, *self.pz0_mean.shape[1:]), device=self.pz0_mean.device
+        )
         z0 = self.pz0_mean + self.pz0_logstd.exp() * eps
-        zs = torchsde.sdeint(self, z0, ts, names={'drift': 'h'}, dt=1e-3, bm=bm)
+        zs = torchsde.sdeint(self, z0, ts, names={"drift": "h"}, dt=dt, bm=bm)
         # Most of the times in ML, we don't sample the observation noise for visualization purposes.
         _xs = self.projector(zs)
         return _xs
-    
-    
+
     @torch.no_grad()
     def posterior_plot(self, xs, ts, adjoint=False, method="euler_heun"):
         # Contextualization is only needed for posterior inference.
@@ -180,40 +196,58 @@ class LatentSDE(nn.Module):
         if adjoint:
             # Must use the argument `adjoint_params`, since `ctx` is not part of the input to `f`, `g`, and `h`.
             adjoint_params = (
-                    (ctx,) +
-                    tuple(self.f_net.parameters()) + tuple(self.g_nets.parameters()) + tuple(self.h_net.parameters())
+                (ctx,)
+                + tuple(self.f_net.parameters())
+                + tuple(self.g_nets.parameters())
+                + tuple(self.h_net.parameters())
             )
             zs, log_ratio = torchsde.sdeint_adjoint(
-                self, z0, ts, adjoint_params=adjoint_params, dt=1e-2, logqp=True, method=method)
+                self,
+                z0,
+                ts,
+                adjoint_params=adjoint_params,
+                dt=1e-2,
+                logqp=True,
+                method=method,
+            )
         else:
-            zs, log_ratio = torchsde.sdeint(self, z0, ts, dt=1e-2, logqp=True, method=method)
+            zs, log_ratio = torchsde.sdeint(
+                self, z0, ts, dt=1e-2, logqp=True, method=method
+            )
 
         _xs = self.projector(zs)
         return _xs, log_ratio
 
 
-def make_dataset(t0, t1, batch_size, noise_std, train_dir, device):
-    data_path = os.path.join(train_dir, 'bistable_data.pth')
+def steps(t0, t1, dt):
+    return math.ceil((t1 - t0) / dt)
 
-    if os.path.exists(data_path):
-        data_dict = torch.load(data_path)
-        xs, ts = data_dict['xs'], data_dict['ts']
-        logging.warning(f'Loaded toy data at: {data_path}')
-        if xs.shape[1] != batch_size:
-            raise ValueError("Batch size has changed; please delete and regenerate the data.")
-        if ts[0] != t0 or ts[-1] != t1:
-            raise ValueError("Times interval [t0, t1] has changed; please delete and regenerate the data.")
 
-    else:
+def make_dataset(t0, t1, t1_extrapolated, dt, batch_size, noise_std, train_dir, device):
+    data_path = os.path.join(train_dir, "bistable_data.pth")
 
-        _y0 = (torch.randn(batch_size, 1, device=device) * 20.0) + 270.0
-        ts = torch.linspace(t0, t1, steps=100, device=device)
-        xs = StochasticEnergyBalance().sample(_y0, ts, noise_std, normalize=True)
+    steps_train = steps(t0, t1, dt)
+    steps_extrapolated = steps(t0, t1_extrapolated, dt)
 
-        os.makedirs(os.path.dirname(data_path), exist_ok=True)
-        torch.save({'xs': xs, 'ts': ts}, data_path)
-        logging.warning(f'Stored toy data at: {data_path}')
-    return xs.to(device), ts.to(device).to(device)
+    _y0 = (torch.randn(batch_size, 1, device=device) * 20.0) + 270.0
+
+    ts = torch.linspace(t0, t1, steps=steps_train, device=device)
+    ts_extrapolated = torch.linspace(
+        t0, t1_extrapolated, steps=steps_extrapolated, device=device
+    )
+
+    xs_extrapolated = StochasticEnergyBalance().sample(
+        _y0, ts_extrapolated, noise_std, normalize=True
+    )
+    xs_train = xs_extrapolated[0:steps_train, :, :]
+
+    os.makedirs(os.path.dirname(data_path), exist_ok=True)
+    torch.save(
+        {"ts_train": ts, "ts_extrapolated": ts_extrapolated, "xs": xs_extrapolated, "dt": dt}, data_path
+    )
+    logging.warning(f"Stored data at: {data_path}")
+
+    return xs_train.to(device), ts.to(device).to(device)
 
 
 def vis(xs, ts, latent_sde, bm_vis, img_path, num_samples=100):
@@ -227,29 +261,30 @@ def vis(xs, ts, latent_sde, bm_vis, img_path, num_samples=100):
     # Left plot: data.
     z = xs.cpu().numpy()
     ax00.plot(z[:, :, 0])
-    ax00.set_title('Data', fontsize=20)
+    ax00.set_title("Data", fontsize=20)
     xlim = ax00.get_xlim()
     ylim = ax00.get_ylim()
 
     # Right plot: samples from learned model.
     prior = latent_sde.sample(batch_size=num_samples, ts=ts, bm=bm_vis).cpu().numpy()
     ax01.plot(prior[:, :, 0])
-    ax01.set_title('Prior', fontsize=20)
+    ax01.set_title("Prior", fontsize=20)
     ax01.set_xlim(xlim)
     ax01.set_ylim(ylim)
-    
+
     posterior, kl = latent_sde.posterior_plot(xs, ts)
     ax02.plot(posterior.cpu().numpy()[:, :, 0])
-    ax02.set_title('Posterior', fontsize=20)
+    ax02.set_title("Posterior", fontsize=20)
     ax02.set_xlim(xlim)
     ax02.set_ylim(ylim)
 
     ax03.plot(kl.cpu().numpy()[:, :])
-    ax03.set_title('KL', fontsize=20)
+    ax03.set_title("KL", fontsize=20)
 
     plt.savefig(img_path)
     plt.close()
-    
+
+
 def plot_learning(loss, kl, logpxs, lr, kl_sched, img_path):
     fig = plt.figure(figsize=(16, 9))
     gs = gridspec.GridSpec(3, 2)
@@ -259,17 +294,17 @@ def plot_learning(loss, kl, logpxs, lr, kl_sched, img_path):
     lrp = fig.add_subplot(gs[2, 0])
     kl_schedp = fig.add_subplot(gs[2, 1])
 
-    lossp.set_title('Loss', fontsize=20)
+    lossp.set_title("Loss", fontsize=20)
     lossp.plot(loss)
-    
+
     klp.set_title("KL", fontsize=20)
     klp.set_yscale("symlog")
     klp.plot(kl)
-    
+
     logpxsp.set_title("Log-Likelihoods", fontsize=20)
     logpxsp.set_yscale("symlog")
     logpxsp.plot(logpxs)
-    
+
     lrp.set_title("Learning Rate", fontsize=20)
     lrp.set_yscale("symlog")
     lrp.plot(lr)
@@ -280,29 +315,40 @@ def plot_learning(loss, kl, logpxs, lr, kl_sched, img_path):
     plt.savefig(img_path)
     plt.close()
 
+
 def main(
-        batch_size=1024,
-        latent_size=4,
-        context_size=32,
-        hidden_size=64,
-        lr_init=1e-2,
-        t0=0.,
-        t1=4.0,
-        lr_gamma=0.997,
-        num_iters=5000,
-        kl_anneal_iters=1000,
-        pause_every=100,
-        noise_std=0.01,
-        adjoint=False,
-        train_dir='./dump/',
-        method="euler_heun",
-        viz_samples=100,
-        beta=1.0,
+    batch_size=1024,
+    latent_size=4,
+    context_size=32,
+    hidden_size=64,
+    lr_init=1e-2,
+    t0=0.0,
+    t1=4.0,
+    lr_gamma=0.997,
+    num_iters=5000,
+    kl_anneal_iters=1000,
+    pause_every=100,
+    noise_std=0.01,
+    adjoint=False,
+    train_dir="./dump/",
+    method="euler_heun",
+    viz_samples=100,
+    beta=1.0,
+    dt=0.01,
 ):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-    xs, ts = make_dataset(t0=t0, t1=t1, batch_size=batch_size, noise_std=noise_std, train_dir=train_dir, device=device)
+    sys.setrecursionlimit(1500)
+    xs, ts = make_dataset(
+        t0=t0,
+        t1=t1,
+        t1_extrapolated=t1 * 5.0,
+        dt=dt,
+        batch_size=batch_size,
+        noise_std=noise_std,
+        train_dir=train_dir,
+        device=device,
+    )
     latent_sde = LatentSDE(
         data_size=1,
         latent_size=latent_size,
@@ -310,13 +356,23 @@ def main(
         hidden_size=hidden_size,
     ).to(device)
     optimizer = optim.Adam(params=latent_sde.parameters(), lr=lr_init)
-    scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=lr_gamma)
+    scheduler = torch.optim.lr_scheduler.ExponentialLR(
+        optimizer=optimizer, gamma=lr_gamma
+    )
     kl_scheduler = LinearScheduler(iters=kl_anneal_iters, maxval=beta)
 
     # Fix the same Brownian motion for visualization.
     bm_vis = torchsde.BrownianInterval(
-        t0=t0, t1=t1, size=(viz_samples, latent_size,), device=device, levy_area_approximation="space-time")
-    
+        t0=t0,
+        t1=t1,
+        size=(
+            viz_samples,
+            latent_size,
+        ),
+        device=device,
+        levy_area_approximation="space-time",
+    )
+
     recorded_loss = []
     recorded_kl = []
     recorded_logpxs = []
@@ -332,10 +388,10 @@ def main(
         scheduler.step()
         kl_scheduler.step()
 
-        lr_now = optimizer.param_groups[0]['lr']
+        lr_now = optimizer.param_groups[0]["lr"]
         logging.warning(
-            f'global_step: {global_step:06d}, lr: {lr_now:.5f}, '
-            f'log_pxs: {log_pxs:.4f}, log_ratio: {log_ratio:.4f} loss: {loss:.4f}, kl_coeff: {kl_scheduler.val:.4f}'
+            f"global_step: {global_step:06d}, lr: {lr_now:.5f}, "
+            f"log_pxs: {log_pxs:.4f}, log_ratio: {log_ratio:.4f} loss: {loss:.4f}, kl_coeff: {kl_scheduler.val:.4f}"
         )
         recorded_loss.append(float(loss))
         recorded_kl.append(float(log_ratio))
@@ -344,14 +400,28 @@ def main(
         recorded_kl_sched.append(float(kl_scheduler.val))
 
         if global_step % pause_every == 1:
-            img_path = os.path.join(train_dir, f'{global_step:06d}_model.pdf')
-            vis(xs[:, 0:30, :], ts, latent_sde, bm_vis, img_path, num_samples=viz_samples)
-            img_path2 = os.path.join(train_dir, f'{global_step:06d}_train.pdf')
-            plot_learning(recorded_loss, recorded_kl, recorded_logpxs, recorded_lr, recorded_kl_sched, img_path2)
-            model_path = os.path.join(train_dir, f'{global_step:06d}_pytorch_model.pth')
+            img_path = os.path.join(train_dir, f"{global_step:06d}_model.pdf")
+            vis(
+                xs[:, 0:30, :],
+                ts,
+                latent_sde,
+                bm_vis,
+                img_path,
+                num_samples=viz_samples,
+            )
+            img_path2 = os.path.join(train_dir, f"{global_step:06d}_train.pdf")
+            plot_learning(
+                recorded_loss,
+                recorded_kl,
+                recorded_logpxs,
+                recorded_lr,
+                recorded_kl_sched,
+                img_path2,
+            )
+            model_path = os.path.join(train_dir, f"{global_step:06d}_pytorch_model.pth")
             torch.save(latent_sde, model_path)
+
 
 if __name__ == "__main__":
     print(" ".join(sys.argv))
     fire.Fire(main)
-

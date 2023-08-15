@@ -10,6 +10,7 @@ fire = "*"
 matplotlib = "*"
 numpy = "*"
 tqdm = "*"
+black = "*"
 
 [dev-packages]
 
