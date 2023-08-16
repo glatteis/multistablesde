@@ -15,6 +15,8 @@ from torch import optim
 from torch.distributions import Normal
 import scipy.stats
 import json
+import glob
+from pathlib import Path
 
 import torchsde
 
@@ -121,7 +123,8 @@ def tipping_rate(ts, xs):
                 tips_counted_here += 1
         tips_counted[time] = tips_counted_here
     
-    return tips_counted
+    dt = ts[1] - ts[0]
+    return tips_counted / dt
 
 def draw_tipping(ts, xs_data, xs_sde, window_size, file, title):
     tipping_data = tipping_rate(ts, xs_data).unfold(0, window_size, window_size).sum(dim=1)
@@ -134,15 +137,11 @@ def draw_tipping(ts, xs_data, xs_sde, window_size, file, title):
     plt.savefig(file + ".pdf")
     plt.close()
 
+def run_individual_analysis(model, data):
+    out = model.replace(".pth", "")
+    os.makedirs(out, exist_ok=True)
+    print(f"Writing individual analysis to folder {out}")
 
-def main(model=None, data=None, out=None, folder=None):
-    # automatically walk through folder and find data.pth / model.pth pairs
-    # also run analysis on entire benchmark
-    if out == None:
-        out = model.replace(".pth", "")
-        os.makedirs(out, exist_ok=True)
-        print(f"Using folder {out}")
-        
     latent_sde = torch.load(model, map_location=torch.device("cpu"))
     tsxs_data = torch.load(data, map_location=torch.device("cpu"))
 
@@ -212,6 +211,55 @@ def main(model=None, data=None, out=None, folder=None):
 
     with open(f"{out}/info.json", "w", encoding="utf8") as f:
         json.dump(info, f, ensure_ascii=False, indent=4)
+
+def run_summary_analysis(model_folders, out):
+    print(f"Writing summary analysis to folder {out}")
+    # self-reported kwargs of simulations
+    config_jsons = [os.path.join(x, "config.json") for x in model_folders]
+    # summary statistics that we just generated
+    info_jsons = [os.path.join(x, "model/info.json") for x in model_folders]
+    
+    configs = [json.loads(Path(f).read_text()) for f in config_jsons]
+    infos = [json.loads(Path(f).read_text()) for f in info_jsons]
+    
+    timespans = infos[0].keys()
+    
+    for ts in timespans:
+        betas = [x["beta"] for x in configs]
+        tipping_rates_sde = [x[ts]["tipping_rate_sde"] for x in infos]
+        tipping_rates_data = [x[ts]["tipping_rate_data"] for x in infos]
+        plt.plot(betas, tipping_rates_sde, label="Latent SDE", color="green")
+        plt.plot(betas, tipping_rates_data, label="Data", color="orange")
+        plt.legend()
+        plt.title("Tipping Rates after Beta")
+        plt.savefig(f"{out}/tipping_beta_{ts}.pdf")
+        plt.close()
+
+def main(model=None, data=None, folder=None):
+    # automatically walk through folder and find data.pth / model.pth pairs
+    # also run analysis on entire benchmark
+    
+    models_and_data = []
+    model_folders = None
+    
+    if folder is None:
+        # just run the analysis script on this one file
+        models_and_data = [(model, data)]
+    else:
+        model_files = glob.glob(f"{folder}/**/model.pth", recursive=True)
+        model_folders = [os.path.dirname(x) for x in model_files]
+        data_files = [os.path.join(x, "data.pth") for x in model_folders]
+        assert all([os.path.exists(x) for x in data_files])
+        models_and_data = list(zip(model_files, data_files))
+    
+    for (model, data) in models_and_data:
+        run_individual_analysis(model, data)
+    
+    # if we ran a batch analyze, run the meta-analysis as well
+    if folder is not None:
+        summary_folder = os.path.join(folder, "summary")
+        os.makedirs(summary_folder, exist_ok=True)
+        run_summary_analysis(model_folders, summary_folder)
 
 
 if __name__ == "__main__":

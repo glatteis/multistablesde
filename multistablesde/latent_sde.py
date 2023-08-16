@@ -29,6 +29,8 @@ import math
 import json
 from typing import Sequence
 
+import time
+
 import fire
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
@@ -346,7 +348,7 @@ def main(
     pause_every=100,
     noise_std=0.01,
     adjoint=False,
-    train_dir="./dump/",
+    train_dir="./dump/" + str(time.time_ns()),
     method="euler_heun",
     viz_samples=30,
     beta=1.0,
