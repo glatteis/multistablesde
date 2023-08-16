@@ -4,6 +4,7 @@ import sys
 from typing import Sequence
 
 import fire
+import matplotlib
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import numpy as np
@@ -19,7 +20,6 @@ import torchsde
 
 # Wildcard import so that imported files find all classes
 from latent_sde import *
-
 
 def draw_marginals(xs_sde, xs_data, file, title):
     bins = np.linspace(-4, 4, 100)
@@ -41,7 +41,8 @@ def draw_marginals(xs_sde, xs_data, file, title):
     )
     plt.legend()
     plt.title(f"Marginals, {title}")
-    plt.savefig(file + ".pdf", backend="pgf")
+    plt.savefig(file + ".pdf")
+    plt.savefig(file + ".pgf")
     plt.close()
 
 
@@ -80,7 +81,8 @@ def draw_mean_var(ts, xs_sde, xs_data, file, title):
     ax.legend()
     plt.title(f"95% confidence, {title}")
 
-    plt.savefig(file + ".pdf", backend="pgf")
+    plt.savefig(file + ".pdf")
+    plt.savefig(file + ".pgf")
     plt.close()
 
 
@@ -101,7 +103,39 @@ def draw_posterior_around_data(ts, xs_posterior, xs_datapoint, file, title):
 
     ax.legend()
     plt.title(f"Posterior around data, {title}")
-    plt.savefig(file + ".pdf", backend="pgf")
+    plt.savefig(file + ".pdf")
+    plt.savefig(file + ".pgf")
+    plt.close()
+    
+
+def tipping_rate(ts, xs):
+    assert xs.size(dim=2) == 1
+    mean_xs = mean(xs)
+    
+    tips_counted = torch.zeros_like(ts)
+    
+    for time in range(xs.size(dim=0) - 1):
+        tips_counted_here = 0
+        for batch in range(xs.size(dim=1)):
+            mean_at_time = mean_xs[time]
+            before = xs[time, batch, 0]
+            after = xs[time + 1, batch, 0]
+            if (before > mean_at_time and after <= mean_at_time) or (before < mean_at_time and after >= mean_at_time):
+                tips_counted_here += 1
+        tips_counted[time] = tips_counted_here
+    
+    return tips_counted
+
+def draw_tipping(ts, xs_data, xs_sde, window_size, file, title):
+    tipping_data = tipping_rate(ts, xs_data).unfold(0, window_size, window_size).sum(dim=1)
+    tipping_sde = tipping_rate(ts, xs_sde).unfold(0, window_size, window_size).sum(dim=1)
+
+    plt.plot(ts[::window_size], tipping_sde, color="green", label="Latent SDE")
+    plt.plot(ts[::window_size], tipping_data, color="orange", label="Data")
+    plt.legend()
+    plt.title(f"Observed tips, {title}")
+    plt.savefig(file + ".pdf")
+    plt.savefig(file + ".pgf")
     plt.close()
 
 
@@ -109,6 +143,13 @@ def main(model=None, data=None, out=None):
     if out == None:
         out = model.replace(".pth", "")
         os.makedirs(out, exist_ok=True)
+        
+    matplotlib.use('pgf')
+    # clear => use default fonts in pgf exports
+    matplotlib.rcParams["font.monospace"].clear().clear()
+    matplotlib.rcParams["font.serif"].clear()
+    matplotlib.rcParams["font.sans-serif"].clear()
+
     latent_sde = torch.load(model, map_location=torch.device("cpu"))
     tsxs_data = torch.load(data, map_location=torch.device("cpu"))
 
@@ -117,12 +158,12 @@ def main(model=None, data=None, out=None):
 
     dt = tsxs_data["dt"]
 
-    marginal_size = 1000
-    xs_sde_extrapolated = latent_sde.sample(marginal_size, ts_extrapolated, dt=dt)
+    batch_size = tsxs_data["xs"].size(dim=1)
+    xs_sde_extrapolated = latent_sde.sample(batch_size, ts_extrapolated, dt=dt)
     xs_data_extrapolated = tsxs_data["xs"]
 
     datapoint_extrapolated = xs_data_extrapolated[:, 1:2, :]
-    datapoint_extrapolated_repeated = datapoint_extrapolated.repeat(1, marginal_size, 1)
+    datapoint_extrapolated_repeated = datapoint_extrapolated.repeat(1, batch_size, 1)
     posterior_extrapolated, _ = latent_sde.posterior_plot(
         datapoint_extrapolated_repeated, ts_extrapolated
     )
@@ -158,6 +199,11 @@ def main(model=None, data=None, out=None):
             ts, posterior, datapoint, f"{out}/posterior_{name}", title
         )
 
+        draw_tipping(ts, xs_data, xs_sde, 10, f"{out}/tipping_{name}", title)
+        
+        info_local["tipping_rate_data"] = float(tipping_rate(ts, xs_data).sum())
+        info_local["tipping_rate_sde"] = float(tipping_rate(ts, xs_sde).sum())
+
         info[name] = info_local
 
     # compute wasserstein distance for entire timeseries
@@ -168,7 +214,8 @@ def main(model=None, data=None, out=None):
         wasserstein_distances.append(distance_between_histograms(xs_sde, xs_data))
     plt.plot(ts_extrapolated[1:], wasserstein_distances)
     plt.title("Wasserstein Distances")
-    plt.savefig(f"{out}/wasserstein.pdf", backend="pgf")
+    plt.savefig(f"{out}/wasserstein.pdf")
+    plt.savefig(f"{out}/wasserstein.pgf")
     plt.close()
 
     with open(f"{out}/info.json", "w", encoding="utf8") as f:

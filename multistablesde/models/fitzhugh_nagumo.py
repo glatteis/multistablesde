@@ -5,7 +5,7 @@ import math
 
 class FitzHughNagumo(object):
     noise_type = "diagonal"
-    sde_type = "stratonovich"
+    sde_type = "ito"
 
     b = 0.04
     alpha1 = 2.23
@@ -49,6 +49,6 @@ class FitzHughNagumo(object):
         # Throw away second dimension
         xs = torchsde.sdeint(self, x0, ts)[:, :, 1:2]
         if normalize:
-            mean, std = torch.mean(xs, dim=(0, 1)), torch.std(xs, dim=(0, 1))
+            mean, std = torch.mean(xs[0, :, :], dim=(0, 1)), torch.std(xs[0, :, :], dim=(0, 1))
             xs.sub_(mean).div_(std)
         return xs

@@ -42,6 +42,7 @@ import torchsde
 
 from models.energy_balance import StochasticEnergyBalance
 from models.fitzhugh_nagumo import FitzHughNagumo
+from models.geometric_bm import GeometricBM
 
 
 class LinearScheduler(object):
@@ -240,6 +241,7 @@ def make_dataset(
     models = {
         "energy": StochasticEnergyBalance(),
         "fitzhugh": FitzHughNagumo(),
+        "geometricbm": GeometricBM(),
     }
 
     xs_extrapolated = models[model].sample(
