@@ -359,6 +359,7 @@ def main(
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+    sys.setrecursionlimit(1500)
     xs, ts = make_dataset(
         model=model,
         t0=t0,

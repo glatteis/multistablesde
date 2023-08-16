@@ -24,4 +24,4 @@ module purge
 cd ~/multistablesde/
 
 # run specified script 
-./slurm/$1
+./slurm/$1 ~/artifacts/${SLURM_ARRAY_JOB_ID}_$1/${SLURM_ARRAY_TASK_ID}/

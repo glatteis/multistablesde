@@ -9,4 +9,4 @@ variable_args=(
 	"--beta=10000"
 )
 
-srun python3 -m pipenv run python $fixed_args ${variable_args[$SLURM_ARRAY_TASK_ID]} --train-dir ~/artifacts/${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}/
+srun python3 -m pipenv run python $fixed_args ${variable_args[$SLURM_ARRAY_TASK_ID]} --train-dir $1
