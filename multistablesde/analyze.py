@@ -42,7 +42,6 @@ def draw_marginals(xs_sde, xs_data, file, title):
     plt.legend()
     plt.title(f"Marginals, {title}")
     plt.savefig(file + ".pdf")
-    plt.savefig(file + ".pgf")
     plt.close()
 
 
@@ -82,7 +81,6 @@ def draw_mean_var(ts, xs_sde, xs_data, file, title):
     plt.title(f"95% confidence, {title}")
 
     plt.savefig(file + ".pdf")
-    plt.savefig(file + ".pgf")
     plt.close()
 
 
@@ -104,7 +102,6 @@ def draw_posterior_around_data(ts, xs_posterior, xs_datapoint, file, title):
     ax.legend()
     plt.title(f"Posterior around data, {title}")
     plt.savefig(file + ".pdf")
-    plt.savefig(file + ".pgf")
     plt.close()
     
 
@@ -135,7 +132,6 @@ def draw_tipping(ts, xs_data, xs_sde, window_size, file, title):
     plt.legend()
     plt.title(f"Observed tips, {title}")
     plt.savefig(file + ".pdf")
-    plt.savefig(file + ".pgf")
     plt.close()
 
 
@@ -145,13 +141,8 @@ def main(model=None, data=None, out=None, folder=None):
     if out == None:
         out = model.replace(".pth", "")
         os.makedirs(out, exist_ok=True)
+        print(f"Using folder {out}")
         
-    matplotlib.use('pgf')
-    # clear => use default fonts in pgf exports
-    matplotlib.rcParams["font.monospace"].clear().clear()
-    matplotlib.rcParams["font.serif"].clear()
-    matplotlib.rcParams["font.sans-serif"].clear()
-
     latent_sde = torch.load(model, map_location=torch.device("cpu"))
     tsxs_data = torch.load(data, map_location=torch.device("cpu"))
 
@@ -201,7 +192,7 @@ def main(model=None, data=None, out=None, folder=None):
             ts, posterior, datapoint, f"{out}/posterior_{name}", title
         )
 
-        draw_tipping(ts, xs_data, xs_sde, 10, f"{out}/tipping_{name}", title)
+        draw_tipping(ts, xs_data, xs_sde, 5, f"{out}/tipping_{name}", title)
         
         info_local["tipping_rate_data"] = float(tipping_rate(ts, xs_data).sum())
         info_local["tipping_rate_sde"] = float(tipping_rate(ts, xs_sde).sum())
@@ -217,7 +208,6 @@ def main(model=None, data=None, out=None, folder=None):
     plt.plot(ts_extrapolated[1:], wasserstein_distances)
     plt.title("Wasserstein Distances")
     plt.savefig(f"{out}/wasserstein.pdf")
-    plt.savefig(f"{out}/wasserstein.pgf")
     plt.close()
 
     with open(f"{out}/info.json", "w", encoding="utf8") as f:
