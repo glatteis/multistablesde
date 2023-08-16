@@ -26,6 +26,7 @@ import logging
 import os
 import sys
 import math
+import json
 from typing import Sequence
 
 import fire
@@ -331,7 +332,6 @@ def plot_learning(loss, kl, logpxs, lr, kl_sched, img_path):
     plt.savefig(img_path)
     plt.close()
 
-
 def main(
     batch_size=1024,
     latent_size=4,
@@ -353,9 +353,12 @@ def main(
     dt=0.01,
     model="energy",
 ):
+    # Save the set configuration for analysis - these are just the locals at
+    # the beginning of the execution
+    configuration = locals()
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    sys.setrecursionlimit(1500)
     xs, ts = make_dataset(
         model=model,
         t0=t0,
@@ -367,6 +370,11 @@ def main(
         train_dir=train_dir,
         device=device,
     )
+
+    # Save configuration
+    with open(f"{train_dir}/config.json", "w", encoding="utf8") as f:
+        json.dump(configuration, f, ensure_ascii=False, indent=4)
+
     latent_sde = LatentSDE(
         data_size=1,
         latent_size=latent_size,
@@ -407,10 +415,6 @@ def main(
         kl_scheduler.step()
 
         lr_now = optimizer.param_groups[0]["lr"]
-        logging.warning(
-            f"global_step: {global_step:06d}, lr: {lr_now:.5f}, "
-            f"log_pxs: {log_pxs:.4f}, log_ratio: {log_ratio:.4f} loss: {loss:.4f}, kl_coeff: {kl_scheduler.val:.4f}"
-        )
         recorded_loss.append(float(loss))
         recorded_kl.append(float(log_ratio))
         recorded_logpxs.append(float(log_pxs))
@@ -418,6 +422,10 @@ def main(
         recorded_kl_sched.append(float(kl_scheduler.val))
 
         if (global_step % pause_every == 0 and global_step != 0) or global_step == 1:
+            logging.warning(
+                f"global_step: {global_step:06d}, lr: {lr_now:.5f}, "
+                f"log_pxs: {log_pxs:.4f}, log_ratio: {log_ratio:.4f} loss: {loss:.4f}, kl_coeff: {kl_scheduler.val:.4f}"
+            )
             img_path = os.path.join(train_dir, f"{global_step:06d}_model.pdf")
             vis(
                 xs[:, 0:30, :],
@@ -439,7 +447,8 @@ def main(
             )
             model_path = os.path.join(train_dir, f"{global_step:06d}_pytorch_model.pth")
             torch.save(latent_sde, model_path)
-
+    # Save final model
+    torch.save(latent_sde, os.path.join(train_dir, "model.pth"))
 
 if __name__ == "__main__":
     print(" ".join(sys.argv))

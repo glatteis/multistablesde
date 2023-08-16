@@ -135,7 +135,9 @@ def draw_tipping(ts, xs_data, xs_sde, window_size, file, title):
     plt.close()
 
 
-def main(model=None, data=None, out=None):
+def main(model=None, data=None, out=None, folder=None):
+    # automatically walk through folder and find data.pth / model.pth pairs
+    # also run analysis on entire benchmark
     if out == None:
         out = model.replace(".pth", "")
         os.makedirs(out, exist_ok=True)
