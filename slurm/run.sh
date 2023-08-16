@@ -4,7 +4,7 @@
 #SBATCH --partition=c18g
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=2
-#SBATCH --time=02:00:00
+#SBATCH --time=02:30:00
 #SBATCH --output=/rwthfs/rz/cluster/home/wx133755/output/%x.%A_%4a.out
 
 ###
