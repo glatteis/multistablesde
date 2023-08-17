@@ -222,20 +222,28 @@ def run_individual_analysis(model, data):
     with open(f"{out}/info.json", "w", encoding="utf8") as f:
         json.dump(info, f, ensure_ascii=False, indent=4)
 
-def draw_param_to_tipping_rate(configs, infos, ts, param_name, param_title, out):
+def draw_param_to_tipping_rate(configs, infos, ts, param_name, param_title, out, xscale="linear"):
     if not param_name in configs[0].keys():
         print(f"No {param_name}, skipping")
         return
     params = [x[param_name] for x in configs]
+    if None in params:
+        print(f"None in {param_name}, skipping")
+        return
+    if params.count(params[0]) == len(params):
+        print(f"Only same value in {param_name}, skipping")
+        return
+    sorted_params = sorted(params)
     # sort by the param, so first zip...
     tipping_rates_sde_sorted = sorted(zip(params, [x[ts]["tipping_rate_sde"] for x in infos]))
     tipping_rates_data_sorted = sorted(zip(params, [x[ts]["tipping_rate_data"] for x in infos]))
     # and then choose second item
     tipping_rates_sde = list(zip(*tipping_rates_sde_sorted))[1]
     tipping_rates_data = list(zip(*tipping_rates_data_sorted))[1]
-    plt.plot(tipping_rates_sde, label="Latent SDE", color="green")
-    plt.plot(tipping_rates_data, label="Data", color="orange")
+    plt.plot(sorted_params, tipping_rates_sde, label="Latent SDE", color="green")
+    plt.plot(sorted_params, tipping_rates_data, label="Data", color="orange")
     plt.xlabel(param_title)
+    plt.xscale(xscale)
     plt.ylabel("Tipping Rate")
     plt.legend()
     plt.title(f"{param_title} to Tipping Rates")
@@ -255,7 +263,7 @@ def run_summary_analysis(model_folders, out):
     timespans = infos[0].keys()
     
     for ts in timespans:
-        draw_param_to_tipping_rate(configs, infos, ts, "beta", "Beta", out)
+        draw_param_to_tipping_rate(configs, infos, ts, "beta", "Beta", out, xscale="log")
         draw_param_to_tipping_rate(configs, infos, ts, "context_size", "Context Size", out)
         draw_param_to_tipping_rate(configs, infos, ts, "data_noise_level", "Data Noise Level", out)
 
@@ -276,8 +284,8 @@ def main(model=None, data=None, folder=None):
         assert all([os.path.exists(x) for x in data_files])
         models_and_data = list(zip(model_files, data_files))
     
-    for (model, data) in models_and_data:
-        run_individual_analysis(model, data)
+    #for (model, data) in models_and_data:
+    #    run_individual_analysis(model, data)
     
     # if we ran a batch analyze, run the meta-analysis as well
     if folder is not None:
