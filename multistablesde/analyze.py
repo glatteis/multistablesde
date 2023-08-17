@@ -226,10 +226,12 @@ def run_summary_analysis(model_folders, out):
     
     for ts in timespans:
         betas = [x["beta"] for x in configs]
-        tipping_rates_sde = [x[ts]["tipping_rate_sde"] for x in infos]
-        tipping_rates_data = [x[ts]["tipping_rate_data"] for x in infos]
-        plt.plot(betas, tipping_rates_sde, label="Latent SDE", color="green")
-        plt.plot(betas, tipping_rates_data, label="Data", color="orange")
+        tipping_rates_sde = sorted(zip(betas, [x[ts]["tipping_rate_sde"] for x in infos]))
+        tipping_rates_data = sorted(zip(betas, [x[ts]["tipping_rate_data"] for x in infos]))
+        plt.plot(tipping_rates_sde, label="Latent SDE", color="green")
+        plt.plot(tipping_rates_data, label="Data", color="orange")
+        plt.xlabel("Beta")
+        plt.ylabel("Tipping Rate")
         plt.legend()
         plt.title("Tipping Rates after Beta")
         plt.savefig(f"{out}/tipping_beta_{ts}.pdf")
