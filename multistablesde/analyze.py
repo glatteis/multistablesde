@@ -270,7 +270,6 @@ def draw_param_to_info(configs, infos, ts, param_name, param_title, info_name, i
     plt.xlabel(param_title)
     plt.xscale(xscale)
     plt.ylabel(info_title)
-    plt.legend()
     plt.title(f"{param_title} to {info_title}")
     plt.savefig(f"{out}/{info_name}_{param_name}_{ts}.pdf")
     plt.close()
@@ -313,8 +312,8 @@ def main(model=None, data=None, folder=None):
         assert all([os.path.exists(x) for x in data_files])
         models_and_data = list(zip(model_files, data_files))
     
-    #for (model, data) in models_and_data:
-    #    run_individual_analysis(model, data)
+    for (model, data) in models_and_data:
+        run_individual_analysis(model, data)
     
     # if we ran a batch analyze, run the meta-analysis as well
     if folder is not None:
