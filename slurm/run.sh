@@ -2,9 +2,10 @@
 
 #SBATCH --job-name=pygpu
 #SBATCH --partition=c18g
+#SBATCH --account=thes1544
 #SBATCH --gres=gpu:1
-#SBATCH --cpus-per-task=2
-#SBATCH --time=02:30:00
+#SBATCH --cpus-per-task=1
+#SBATCH --time=04:00:00
 #SBATCH --output=/rwthfs/rz/cluster/home/wx133755/output/%x.%A_%4a.out
 
 ###
