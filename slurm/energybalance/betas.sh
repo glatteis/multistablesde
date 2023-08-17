@@ -1,5 +1,5 @@
 #!/bin/sh
-fixed_args="multistablesde/latent_sde.py --latent-size=1 --lr_gamma=0.999 --model=energy"
+fixed_args="multistablesde/latent_sde.py --latent-size=1 --lr_gamma=0.9995 --model=energy"
 
 variable_args=(
 	"--beta=1"
