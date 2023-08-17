@@ -223,6 +223,9 @@ def run_individual_analysis(model, data):
         json.dump(info, f, ensure_ascii=False, indent=4)
 
 def draw_param_to_tipping_rate(configs, infos, ts, param_name, param_title, out):
+    if not param_name in configs[0].keys():
+        print(f"No {param_name}, skipping")
+        return
     params = [x[param_name] for x in configs]
     # sort by the param, so first zip...
     tipping_rates_sde_sorted = sorted(zip(params, [x[ts]["tipping_rate_sde"] for x in infos]))
