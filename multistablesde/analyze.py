@@ -24,7 +24,7 @@ import torchsde
 from latent_sde import *
 
 def draw_marginals(xs_sde, xs_data, file, title):
-    bins = np.linspace(-4, 4, 100)
+    bins = np.linspace(min(xs_sde.min(), xs_data.min()), max(xs_sde.max(), xs_data.max()), 100)
     plt.hist(
         torch.flatten(xs_sde).numpy(),
         bins=bins,
@@ -80,6 +80,8 @@ def draw_mean_var(ts, xs_sde, xs_data, file, title):
     )
 
     ax.legend()
+    plt.xlabel("Time $t$")
+    plt.ylabel("Value $u(t)$")
     plt.title(f"95% confidence, {title}")
 
     plt.savefig(file + ".pdf")
@@ -102,6 +104,9 @@ def draw_posterior_around_data(ts, xs_posterior, xs_datapoint, file, title):
     ax.plot(ts, xs_datapoint[:, 0, 0], label="Data", color="orange", linewidth=2.0)
 
     ax.legend()
+
+    plt.xlabel("Time $t$")
+    plt.ylabel("Value $u(t)$")
     plt.title(f"Posterior around data, {title}")
     plt.savefig(file + ".pdf")
     plt.close()
@@ -127,12 +132,14 @@ def tipping_rate(ts, xs):
     return tips_counted / dt
 
 def draw_tipping(ts, xs_data, xs_sde, window_size, file, title):
-    tipping_data = tipping_rate(ts, xs_data).unfold(0, window_size, window_size).sum(dim=1)
-    tipping_sde = tipping_rate(ts, xs_sde).unfold(0, window_size, window_size).sum(dim=1)
+    tipping_data = tipping_rate(ts, xs_data).unfold(0, window_size, window_size).mean(dim=1)
+    tipping_sde = tipping_rate(ts, xs_sde).unfold(0, window_size, window_size).mean(dim=1)
 
     plt.plot(ts[::window_size], tipping_sde, color="green", label="Latent SDE")
     plt.plot(ts[::window_size], tipping_data, color="orange", label="Data")
     plt.legend()
+    plt.xlabel("Time $t$")
+    plt.ylabel("Tipping rate")
     plt.title(f"Observed tips, {title}")
     plt.savefig(file + ".pdf")
     plt.close()
@@ -165,7 +172,7 @@ def run_individual_analysis(model, data):
 
     intervals = {
         "0_firsthalftrain": ((0, len(ts_train) // 2), "First 1/2 training timespan"),
-        "1_secondhalftrain": ((len(ts_train) // 2 + 1, len(ts_train)), "Second 1/2 training timespan"),
+        "1_secondhalftrain": ((len(ts_train) // 2, len(ts_train)), "Second 1/2 training timespan"),
         "2_train": ((0, len(ts_train)), "training timespan"),
         "3_doubletrain": ((0, len(ts_train) * 2), "2 * training timespan"),
         "4_fivetrain": ((0, len(ts_train) * 5), "5 * training timespan"),
@@ -206,6 +213,8 @@ def run_individual_analysis(model, data):
         xs_sde = xs_sde_extrapolated[interval : interval + 1, :, :]
         wasserstein_distances.append(distance_between_histograms(xs_sde, xs_data))
     plt.plot(ts_extrapolated[1:], wasserstein_distances)
+    plt.xlabel("Time $t$")
+    plt.xlabel("Wasserstein Distance")
     plt.title("Wasserstein Distances")
     plt.savefig(f"{out}/wasserstein.pdf")
     plt.close()
@@ -215,8 +224,12 @@ def run_individual_analysis(model, data):
 
 def draw_param_to_tipping_rate(configs, infos, ts, param_name, param_title, out):
     params = [x[param_name] for x in configs]
-    tipping_rates_sde = sorted(zip(params, [x[ts]["tipping_rate_sde"] for x in infos]))
-    tipping_rates_data = sorted(zip(params, [x[ts]["tipping_rate_data"] for x in infos]))
+    # sort by the param, so first zip...
+    tipping_rates_sde_sorted = sorted(zip(params, [x[ts]["tipping_rate_sde"] for x in infos]))
+    tipping_rates_data_sorted = sorted(zip(params, [x[ts]["tipping_rate_data"] for x in infos]))
+    # and then choose second item
+    tipping_rates_sde = list(zip(*tipping_rates_sde_sorted))[1]
+    tipping_rates_data = list(zip(*tipping_rates_data_sorted))[1]
     plt.plot(tipping_rates_sde, label="Latent SDE", color="green")
     plt.plot(tipping_rates_data, label="Data", color="orange")
     plt.xlabel(param_title)
