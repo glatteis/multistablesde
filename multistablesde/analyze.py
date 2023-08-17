@@ -212,6 +212,19 @@ def run_individual_analysis(model, data):
     with open(f"{out}/info.json", "w", encoding="utf8") as f:
         json.dump(info, f, ensure_ascii=False, indent=4)
 
+def draw_param_to_tipping_rate(configs, infos, ts, param_name, param_title, out):
+    params = [x[param_name] for x in configs]
+    tipping_rates_sde = sorted(zip(params, [x[ts]["tipping_rate_sde"] for x in infos]))
+    tipping_rates_data = sorted(zip(params, [x[ts]["tipping_rate_data"] for x in infos]))
+    plt.plot(tipping_rates_sde, label="Latent SDE", color="green")
+    plt.plot(tipping_rates_data, label="Data", color="orange")
+    plt.xlabel(param_title)
+    plt.ylabel("Tipping Rate")
+    plt.legend()
+    plt.title(f"{param_title} to Tipping Rates")
+    plt.savefig(f"{out}/tipping_{param_name}_{ts}.pdf")
+    plt.close()
+
 def run_summary_analysis(model_folders, out):
     print(f"Writing summary analysis to folder {out}")
     # self-reported kwargs of simulations
@@ -225,17 +238,9 @@ def run_summary_analysis(model_folders, out):
     timespans = infos[0].keys()
     
     for ts in timespans:
-        betas = [x["beta"] for x in configs]
-        tipping_rates_sde = sorted(zip(betas, [x[ts]["tipping_rate_sde"] for x in infos]))
-        tipping_rates_data = sorted(zip(betas, [x[ts]["tipping_rate_data"] for x in infos]))
-        plt.plot(tipping_rates_sde, label="Latent SDE", color="green")
-        plt.plot(tipping_rates_data, label="Data", color="orange")
-        plt.xlabel("Beta")
-        plt.ylabel("Tipping Rate")
-        plt.legend()
-        plt.title("Tipping Rates after Beta")
-        plt.savefig(f"{out}/tipping_beta_{ts}.pdf")
-        plt.close()
+        draw_param_to_tipping_rate(configs, infos, ts, "beta", "Beta", out)
+        draw_param_to_tipping_rate(configs, infos, ts, "context_size", "Context Size", out)
+        draw_param_to_tipping_rate(configs, infos, ts, "data_noise_level", "Data Noise Level", out)
 
 def main(model=None, data=None, folder=None):
     # automatically walk through folder and find data.pth / model.pth pairs

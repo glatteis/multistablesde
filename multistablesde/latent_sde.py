@@ -241,13 +241,7 @@ def make_dataset(
         t0, t1_extrapolated, steps=steps_extrapolated, device=device
     )
 
-    models = {
-        "energy": StochasticEnergyBalance(),
-        "fitzhugh": FitzHughNagumo(),
-        "geometricbm": GeometricBM(),
-    }
-
-    xs_extrapolated = models[model].sample(
+    xs_extrapolated = model.sample(
         batch_size, ts_extrapolated.to(device), normalize=True, device=device
     )
     xs_train = xs_extrapolated[0:steps_train, :, :]
@@ -354,16 +348,27 @@ def main(
     beta=1.0,
     dt=0.01,
     model="energy",
+    data_noise_level=None,
 ):
     # Save the set configuration for analysis - these are just the locals at
     # the beginning of the execution
     configuration = locals()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    
+    
+    models = {
+        "energy": StochasticEnergyBalance(),
+        "fitzhugh": FitzHughNagumo(),
+        "geometricbm": GeometricBM(),
+    }
+    model_obj = models[model]
+    if isinstance(model_obj, StochasticEnergyBalance) and data_noise_level is not None:
+        model_obj.noise_var = data_noise_level
 
     sys.setrecursionlimit(1500)
     xs, ts = make_dataset(
-        model=model,
+        model=model_obj,
         t0=t0,
         t1=t1,
         t1_extrapolated=t1 * 5.0,
