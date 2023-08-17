@@ -250,6 +250,31 @@ def draw_param_to_tipping_rate(configs, infos, ts, param_name, param_title, out,
     plt.savefig(f"{out}/tipping_{param_name}_{ts}.pdf")
     plt.close()
 
+def draw_param_to_info(configs, infos, ts, param_name, param_title, info_name, info_title, out, xscale="linear"):
+    if not param_name in configs[0].keys():
+        print(f"No {param_name}, skipping")
+        return
+    params = [x[param_name] for x in configs]
+    if None in params:
+        print(f"None in {param_name}, skipping")
+        return
+    if params.count(params[0]) == len(params):
+        print(f"Only same value in {param_name}, skipping")
+        return
+    sorted_params = sorted(params)
+    # sort by the param, so first zip...
+    infos_sorted = sorted(zip(params, [x[ts][info_name] for x in infos]))
+    # and then choose second item
+    info_values = list(zip(*infos_sorted))[1]
+    plt.plot(sorted_params, info_values)
+    plt.xlabel(param_title)
+    plt.xscale(xscale)
+    plt.ylabel(info_title)
+    plt.legend()
+    plt.title(f"{param_title} to {info_title}")
+    plt.savefig(f"{out}/{info_name}_{param_name}_{ts}.pdf")
+    plt.close()
+
 def run_summary_analysis(model_folders, out):
     print(f"Writing summary analysis to folder {out}")
     # self-reported kwargs of simulations
@@ -266,6 +291,10 @@ def run_summary_analysis(model_folders, out):
         draw_param_to_tipping_rate(configs, infos, ts, "beta", "Beta", out, xscale="log")
         draw_param_to_tipping_rate(configs, infos, ts, "context_size", "Context Size", out)
         draw_param_to_tipping_rate(configs, infos, ts, "data_noise_level", "Data Noise Level", out)
+
+        draw_param_to_info(configs, infos, ts, "beta", "Beta", "wasserstein_distance", "Wasserstein Distance", out, xscale="log")
+        draw_param_to_info(configs, infos, ts, "context_size", "Context Size", "wasserstein_distance", "Wasserstein Distance", out)
+        draw_param_to_info(configs, infos, ts, "data_noise_level", "Data Noise Level", "wasserstein_distance", "Wasserstein Distance", out)
 
 def main(model=None, data=None, folder=None):
     # automatically walk through folder and find data.pth / model.pth pairs
