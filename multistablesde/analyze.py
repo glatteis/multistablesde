@@ -164,21 +164,22 @@ def run_individual_analysis(model, data):
     assert ts_train[0] == 0.0
 
     intervals = {
-        "0_halftrain": (len(ts_train) // 2, "1/2 training timespan"),
-        "1_train": (len(ts_train), "training timespan"),
-        "2_doubletrain": (len(ts_train) * 2, "2 * training timespan"),
-        "3_fivetrain": (len(ts_train) * 5, "5 * training timespan"),
+        "0_firsthalftrain": ((0, len(ts_train) // 2), "First 1/2 training timespan"),
+        "1_secondhalftrain": ((len(ts_train) // 2 + 1, len(ts_train)), "Second 1/2 training timespan"),
+        "2_train": ((0, len(ts_train)), "training timespan"),
+        "3_doubletrain": ((0, len(ts_train) * 2), "2 * training timespan"),
+        "4_fivetrain": ((0, len(ts_train) * 5), "5 * training timespan"),
     }
 
     info = {}
 
     for name, (interval, title) in intervals.items():
         info_local = {}
-        xs_data = tsxs_data["xs"][0:interval, :, :]
-        xs_sde = xs_sde_extrapolated[0:interval, :, :]
-        ts = ts_extrapolated[0:interval]
-        posterior = posterior_extrapolated[0:interval, :, :]
-        datapoint = datapoint_extrapolated[0:interval, :, :]
+        xs_data = tsxs_data["xs"][interval[0]:interval[1], :, :]
+        xs_sde = xs_sde_extrapolated[interval[0]:interval[1], :, :]
+        ts = ts_extrapolated[interval[0]:interval[1]]
+        posterior = posterior_extrapolated[interval[0]:interval[1], :, :]
+        datapoint = datapoint_extrapolated[interval[0]:interval[1], :, :]
 
         draw_marginals(xs_data, xs_sde, f"{out}/marginals_{name}", title)
         info_local["wasserstein_distance"] = distance_between_histograms(
