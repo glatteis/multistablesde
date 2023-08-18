@@ -60,6 +60,28 @@ def mean(xs):
 def std(xs):
     return torch.std(xs, dim=(1, 2))
 
+def draw_prior(ts, xs_sde, xs_data, file, title):
+    fig = plt.figure(layout="constrained")
+    gs = gridspec.GridSpec(2, 1, figure=fig)
+    latentsde = fig.add_subplot(gs[0, 0])
+    data = fig.add_subplot(gs[1, 0])
+    
+    data.plot(ts, xs_data[:, 0:100, 0], label="Data", color="orange")
+    data.set_title("Data")
+    xlim = data.get_xlim()
+    ylim = data.get_ylim()
+    data.set_xlabel("Time $t$")
+    data.set_ylabel("Value $u(t)$")
+
+    latentsde.plot(ts, xs_sde[:, 0:100, 0], label="Latent SDE", color="green")
+    latentsde.set_title("Latent SDE")
+    latentsde.set_xlim(xlim)
+    latentsde.set_ylim(ylim)
+    latentsde.set_xlabel("Time $t$")
+    latentsde.set_ylabel("Value $u(t)$")
+
+    plt.savefig(file + ".pdf")
+    plt.close()
 
 def draw_mean_var(ts, xs_sde, xs_data, file, title):
     mean_sde = mean(xs_sde)
@@ -193,6 +215,7 @@ def run_individual_analysis(model, data):
             xs_sde, xs_data
         )
 
+        draw_prior(ts, xs_sde, xs_data, f"{out}/prior_{name}", title)
         draw_mean_var(ts, xs_sde, xs_data, f"{out}/mean_var_{name}", title)
 
         draw_posterior_around_data(
@@ -223,16 +246,7 @@ def run_individual_analysis(model, data):
         json.dump(info, f, ensure_ascii=False, indent=4)
 
 def draw_param_to_tipping_rate(configs, infos, ts, param_name, param_title, out, xscale="linear"):
-    if not param_name in configs[0].keys():
-        print(f"No {param_name}, skipping")
-        return
     params = [x[param_name] for x in configs]
-    if None in params:
-        print(f"None in {param_name}, skipping")
-        return
-    if params.count(params[0]) == len(params):
-        print(f"Only same value in {param_name}, skipping")
-        return
     sorted_params = sorted(params)
     # sort by the param, so first zip...
     tipping_rates_sde_sorted = sorted(zip(params, [x[ts]["tipping_rate_sde"] for x in infos]))
@@ -240,8 +254,8 @@ def draw_param_to_tipping_rate(configs, infos, ts, param_name, param_title, out,
     # and then choose second item
     tipping_rates_sde = list(zip(*tipping_rates_sde_sorted))[1]
     tipping_rates_data = list(zip(*tipping_rates_data_sorted))[1]
-    plt.plot(sorted_params, tipping_rates_sde, label="Latent SDE", color="green")
-    plt.plot(sorted_params, tipping_rates_data, label="Data", color="orange")
+    plt.scatter(sorted_params, tipping_rates_sde, label="Latent SDE", color="green")
+    plt.scatter(sorted_params, tipping_rates_data, label="Data", color="orange")
     plt.xlabel(param_title)
     plt.xscale(xscale)
     plt.ylabel("Tipping Rate")
@@ -251,27 +265,43 @@ def draw_param_to_tipping_rate(configs, infos, ts, param_name, param_title, out,
     plt.close()
 
 def draw_param_to_info(configs, infos, ts, param_name, param_title, info_name, info_title, out, xscale="linear"):
-    if not param_name in configs[0].keys():
-        print(f"No {param_name}, skipping")
-        return
     params = [x[param_name] for x in configs]
-    if None in params:
-        print(f"None in {param_name}, skipping")
-        return
-    if params.count(params[0]) == len(params):
-        print(f"Only same value in {param_name}, skipping")
-        return
     sorted_params = sorted(params)
     # sort by the param, so first zip...
     infos_sorted = sorted(zip(params, [x[ts][info_name] for x in infos]))
     # and then choose second item
     info_values = list(zip(*infos_sorted))[1]
-    plt.plot(sorted_params, info_values)
+    plt.scatter(sorted_params, info_values)
     plt.xlabel(param_title)
     plt.xscale(xscale)
     plt.ylabel(info_title)
     plt.title(f"{param_title} to {info_title}")
     plt.savefig(f"{out}/{info_name}_{param_name}_{ts}.pdf")
+    plt.close()
+
+def scatter_param_to_training_info(configs, training_infos, param_name, param_title, out, xscale="linear"):
+    fig, axs = plt.subplots(2, 1, layout="constrained")
+
+    params = [x[param_name] for x in configs]
+    sorted_params = sorted(params)
+
+    training_info_names = {
+        "kl": ("KL Divergence", axs.flat[0], "green"),
+        "logpxs": ("Log-Likelihood", axs.flat[1], "orange")
+    }
+
+    for training_info_name, (training_info_title, ax, color) in training_info_names.items():
+        # sort by the param, so first zip...
+        infos_sorted = sorted(zip(params, [x[training_info_name][-1] for x in training_infos]))
+        # and then choose second item
+        info_values = list(zip(*infos_sorted))[1]
+        ax.scatter(sorted_params, info_values, color=color)
+        ax.set_title(f"{param_title} to {training_info_title}")
+        ax.set_xlabel(param_title)
+        ax.set_ylabel(training_info_title)
+        ax.set_xscale(xscale)
+        ax.set_yscale("symlog")
+    plt.savefig(f"{out}/training_info_{param_name}.pdf")
     plt.close()
 
 def run_summary_analysis(model_folders, out):
@@ -280,28 +310,47 @@ def run_summary_analysis(model_folders, out):
     config_jsons = [os.path.join(x, "config.json") for x in model_folders]
     # summary statistics that we just generated
     info_jsons = [os.path.join(x, "model/info.json") for x in model_folders]
-    
+    # training info
+    training_info_jsons = [os.path.join(x, "training_info.json") for x in model_folders]
+
     configs = [json.loads(Path(f).read_text()) for f in config_jsons]
     infos = [json.loads(Path(f).read_text()) for f in info_jsons]
+    training_infos = [json.loads(Path(f).read_text()) for f in training_info_jsons]
     
     timespans = infos[0].keys()
     
-    for ts in timespans:
-        draw_param_to_tipping_rate(configs, infos, ts, "beta", "Beta", out, xscale="log")
-        draw_param_to_tipping_rate(configs, infos, ts, "context_size", "Context Size", out)
-        draw_param_to_tipping_rate(configs, infos, ts, "data_noise_level", "Data Noise Level", out)
+    params = {
+        "beta": ("Beta", "log"),
+        "context_size": ("Context Size", "linear"),
+        "data_noise_level": ("Data Noise Level", "linear"),
+    }
+    
+    for param_name, (param_title, xscale) in params.items():
+        if not param_name in configs[0].keys():
+            print(f"No {param_name}, skipping")
+            continue
+        params = [x[param_name] for x in configs]
+        if None in params:
+            print(f"None in {param_name}, skipping")
+            continue
+        if params.count(params[0]) == len(params):
+            print(f"Only same value in {param_name}, skipping")
+            continue
+    
+        for ts in timespans:
+            draw_param_to_tipping_rate(configs, infos, ts, param_name, param_title, out, xscale=xscale)
 
-        draw_param_to_info(configs, infos, ts, "beta", "Beta", "wasserstein_distance", "Wasserstein Distance", out, xscale="log")
-        draw_param_to_info(configs, infos, ts, "context_size", "Context Size", "wasserstein_distance", "Wasserstein Distance", out)
-        draw_param_to_info(configs, infos, ts, "data_noise_level", "Data Noise Level", "wasserstein_distance", "Wasserstein Distance", out)
+            draw_param_to_info(configs, infos, ts, param_name, param_title, "wasserstein_distance", "Wasserstein Distance", out, xscale=xscale)
+
+        scatter_param_to_training_info(configs, training_infos, param_name, param_title, out)
 
 def main(model=None, data=None, folder=None):
     # automatically walk through folder and find data.pth / model.pth pairs
     # also run analysis on entire benchmark
-    
+
     models_and_data = []
     model_folders = None
-    
+
     if folder is None:
         # just run the analysis script on this one file
         models_and_data = [(model, data)]
@@ -311,10 +360,10 @@ def main(model=None, data=None, folder=None):
         data_files = [os.path.join(x, "data.pth") for x in model_folders]
         assert all([os.path.exists(x) for x in data_files])
         models_and_data = list(zip(model_files, data_files))
-    
+
     for (model, data) in models_and_data:
         run_individual_analysis(model, data)
-    
+
     # if we ran a batch analyze, run the meta-analysis as well
     if folder is not None:
         summary_folder = os.path.join(folder, "summary")
