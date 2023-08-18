@@ -325,7 +325,7 @@ def main(
     lr_gamma=0.997,
     num_iters=5000,
     kl_anneal_iters=1000,
-    pause_every=100,
+    pause_every=500,
     noise_std=0.01,
     adjoint=False,
     train_dir="./dump/" + str(time.time_ns()),
@@ -341,8 +341,7 @@ def main(
     configuration = locals()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    
-    
+
     models = {
         "energy": StochasticEnergyBalance(),
         "fitzhugh": FitzHughNagumo(),
@@ -443,6 +442,17 @@ def main(
             torch.save(latent_sde, model_path)
     # Save final model
     torch.save(latent_sde, os.path.join(train_dir, "model.pth"))
+
+    # Save recorded losses, KL divergences, etc.
+    training_info = {
+        "loss": recorded_loss,
+        "kl": recorded_kl,
+        "logpxs": recorded_logpxs,
+        "lr": recorded_lr,
+        "kl_sched": recorded_kl_sched,
+    }
+    with open(f"{train_dir}/training_info.json", "w", encoding="utf8") as f:
+        json.dump(training_info, f, ensure_ascii=False, indent=4)
 
 if __name__ == "__main__":
     print(" ".join(sys.argv))
