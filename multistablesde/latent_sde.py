@@ -32,6 +32,7 @@ import torchsde
 from models.energy_balance import StochasticEnergyBalance
 from models.fitzhugh_nagumo import FitzHughNagumo
 from models.geometric_bm import GeometricBM
+from models.ornstein_uhlenbeck import OrnsteinUhlenbeck
 
 
 class LinearScheduler(object):
@@ -346,6 +347,7 @@ def main(
         "energy": StochasticEnergyBalance(),
         "fitzhugh": FitzHughNagumo(),
         "geometricbm": GeometricBM(),
+        "ornstein": OrnsteinUhlenbeck(),
     }
     model_obj = models[model]
     if isinstance(model_obj, StochasticEnergyBalance) and data_noise_level is not None:
