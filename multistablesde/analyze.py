@@ -323,6 +323,7 @@ def run_summary_analysis(model_folders, out):
         "beta": ("Beta", "log"),
         "context_size": ("Context Size", "linear"),
         "data_noise_level": ("Data Noise Level", "linear"),
+        "noise_std": ("Noise Standard Deviation", "log"),
     }
     
     for param_name, (param_title, xscale) in params.items():
@@ -342,7 +343,7 @@ def run_summary_analysis(model_folders, out):
 
             draw_param_to_info(configs, infos, ts, param_name, param_title, "wasserstein_distance", "Wasserstein Distance", out, xscale=xscale)
 
-        scatter_param_to_training_info(configs, training_infos, param_name, param_title, out)
+        scatter_param_to_training_info(configs, training_infos, param_name, param_title, out, xscale=xscale)
 
 def main(model=None, data=None, folder=None):
     # automatically walk through folder and find data.pth / model.pth pairs
