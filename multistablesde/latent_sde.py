@@ -107,8 +107,7 @@ class LatentSDE(nn.Module):
                         nn.Linear(1, hidden_size),
                         nn.Softplus(),
                         nn.Linear(hidden_size, 1),
-                        nn.Sigmoid(),
-                        nn.Linear(1, 1)
+                        nn.Softplus(),
                     )
                     for _ in range(latent_size)
                 ]
