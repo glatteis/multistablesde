@@ -185,7 +185,7 @@ def run_individual_analysis(model, data):
 
     datapoint_extrapolated = xs_data_extrapolated[:, 1:2, :]
     datapoint_extrapolated_repeated = datapoint_extrapolated.repeat(1, batch_size, 1)
-    posterior_extrapolated, _ = latent_sde.posterior_plot(
+    posterior_extrapolated, _, _ = latent_sde.posterior_plot(
         datapoint_extrapolated_repeated, ts_extrapolated
     )
 
