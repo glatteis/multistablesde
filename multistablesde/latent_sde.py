@@ -432,7 +432,7 @@ def main(
     for global_step in tqdm.tqdm(range(1, num_iters + 1)):
         latent_sde.zero_grad()
         log_pxs, log_ratio, noise = latent_sde(xs, ts, noise_std, adjoint, method, dt=dt)
-        loss = -log_pxs + log_ratio * kl_scheduler.val + noise * noise_penalty
+        loss = -log_pxs + log_ratio * kl_scheduler.val - noise * noise_penalty
         loss.backward()
         optimizer.step()
         scheduler.step()
