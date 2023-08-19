@@ -165,9 +165,6 @@ class LatentSDE(nn.Module):
             zs, log_ratio, noise_penalty = torchsde.sdeint(
                 self, z0, ts, dt=dt, logqp_noise_penalty=True, method=method
             )
-            
-        # TODO: Use noise_penalty
-        _ = noise_penalty
 
         _xs = self.projector(zs)
         xs_dist = Normal(loc=_xs, scale=noise_std)
@@ -177,7 +174,10 @@ class LatentSDE(nn.Module):
         pz0 = torch.distributions.Normal(loc=self.pz0_mean, scale=self.pz0_logstd.exp())
         logqp0 = torch.distributions.kl_divergence(qz0, pz0).sum(dim=1).mean(dim=0)
         logqp_path = log_ratio.sum(dim=0).mean(dim=0)
-        return log_pxs, logqp0 + logqp_path
+        
+        noise = noise_penalty.sum(dim=0).mean(dim=0)
+
+        return log_pxs, logqp0 + logqp_path, noise
 
     @torch.no_grad()
     def sample(self, batch_size, ts, bm=None, dt=1e-3):
@@ -223,7 +223,7 @@ class LatentSDE(nn.Module):
             )
 
         _xs = self.projector(zs)
-        return _xs, log_ratio
+        return _xs, log_ratio, noise_penalty
 
 
 def steps(t0, t1, dt):
@@ -265,16 +265,17 @@ def make_dataset(
 
 def vis(xs, ts, latent_sde, bm_vis, img_path, num_samples=100, dt=1e-2):
     fig = plt.figure(figsize=(16, 9))
-    gs = gridspec.GridSpec(2, 2)
+    gs = gridspec.GridSpec(3, 2)
     ax00 = fig.add_subplot(gs[0, 0])
     ax01 = fig.add_subplot(gs[1, 0])
     ax02 = fig.add_subplot(gs[0, 1])
     ax03 = fig.add_subplot(gs[1, 1])
+    ax04 = fig.add_subplot(gs[2, 0])
 
     # Left plot: data.
     z = xs.cpu().numpy()
     ax00.plot(z[:, :, 0])
-    ax00.set_title("Data", fontsize=20)
+    ax00.set_title("Data")
     xlim = ax00.get_xlim()
     ylim = ax00.get_ylim()
 
@@ -283,27 +284,31 @@ def vis(xs, ts, latent_sde, bm_vis, img_path, num_samples=100, dt=1e-2):
         latent_sde.sample(batch_size=num_samples, ts=ts, bm=bm_vis, dt=dt).cpu().numpy()
     )
     ax01.plot(prior[:, :, 0])
-    ax01.set_title("Prior", fontsize=20)
+    ax01.set_title("Prior")
     ax01.set_xlim(xlim)
     ax01.set_ylim(ylim)
 
-    posterior, kl = latent_sde.posterior_plot(xs, ts, dt=dt)
+    posterior, kl, noise_penalty = latent_sde.posterior_plot(xs, ts, dt=dt)
     ax02.plot(posterior.cpu().numpy()[:, :, 0])
-    ax02.set_title("Posterior", fontsize=20)
+    ax02.set_title("Posterior")
     ax02.set_xlim(xlim)
     ax02.set_ylim(ylim)
 
     ax03.plot(kl.cpu().numpy()[:, :])
-    ax03.set_title("KL", fontsize=20)
+    ax03.set_title("KL")
+
+    ax04.plot(noise_penalty.cpu().numpy()[:, :])
+    ax04.set_title("Noise Level")
 
     plt.savefig(img_path)
     plt.close()
 
 
-def plot_learning(loss, kl, logpxs, lr, kl_sched, img_path):
+def plot_learning(loss, kl, logpxs, noise, lr, kl_sched, img_path):
     fig = plt.figure(figsize=(16, 9))
     gs = gridspec.GridSpec(3, 2)
     lossp = fig.add_subplot(gs[0, 0])
+    noisep = fig.add_subplot(gs[0, 1])
     klp = fig.add_subplot(gs[1, 0])
     logpxsp = fig.add_subplot(gs[1, 1])
     lrp = fig.add_subplot(gs[2, 0])
@@ -319,6 +324,9 @@ def plot_learning(loss, kl, logpxs, lr, kl_sched, img_path):
     logpxsp.set_title("Log-Likelihoods")
     logpxsp.set_yscale("symlog")
     logpxsp.plot(logpxs)
+
+    noisep.set_title("Noise")
+    noisep.plot(noise)
 
     lrp.set_title("Learning Rate")
     lrp.set_yscale("symlog")
@@ -352,6 +360,7 @@ def main(
     model="energy",
     data_noise_level=None,
     scalar_diffusion=False,
+    noise_penalty=0.0,
 ):
     # Save the set configuration for analysis - these are just the locals at
     # the beginning of the execution
@@ -414,13 +423,14 @@ def main(
     recorded_loss = []
     recorded_kl = []
     recorded_logpxs = []
+    recorded_noise = []
     recorded_lr = []
     recorded_kl_sched = []
 
     for global_step in tqdm.tqdm(range(1, num_iters + 1)):
         latent_sde.zero_grad()
-        log_pxs, log_ratio = latent_sde(xs, ts, noise_std, adjoint, method, dt=dt)
-        loss = -log_pxs + log_ratio * kl_scheduler.val
+        log_pxs, log_ratio, noise = latent_sde(xs, ts, noise_std, adjoint, method, dt=dt)
+        loss = -log_pxs + log_ratio * kl_scheduler.val + noise * noise_penalty
         loss.backward()
         optimizer.step()
         scheduler.step()
@@ -430,6 +440,7 @@ def main(
         recorded_loss.append(float(loss))
         recorded_kl.append(float(log_ratio))
         recorded_logpxs.append(float(log_pxs))
+        recorded_noise.append(float(noise))
         recorded_lr.append(float(lr_now))
         recorded_kl_sched.append(float(kl_scheduler.val))
 
@@ -437,6 +448,7 @@ def main(
             logging.warning(
                 f"global_step: {global_step:06d}, lr: {lr_now:.5f}, "
                 f"log_pxs: {log_pxs:.4f}, log_ratio: {log_ratio:.4f} loss: {loss:.4f}, kl_coeff: {kl_scheduler.val:.4f}"
+                f"noise: {noise:.4f}"
             )
             img_path = os.path.join(train_dir, f"{global_step:06d}_model.pdf")
             vis(
@@ -453,6 +465,7 @@ def main(
                 recorded_loss,
                 recorded_kl,
                 recorded_logpxs,
+                recorded_noise,
                 recorded_lr,
                 recorded_kl_sched,
                 img_path2,
