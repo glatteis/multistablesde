@@ -65,7 +65,7 @@ class LatentSDE(nn.Module):
     sde_type = "stratonovich"
     noise_type = "diagonal"
 
-    def __init__(self, data_size, latent_size, context_size, hidden_size):
+    def __init__(self, data_size, latent_size, context_size, hidden_size, scalar_diffusion=False):
         super(LatentSDE, self).__init__()
         # Encoder.
         self.encoder = Encoder(
@@ -89,17 +89,30 @@ class LatentSDE(nn.Module):
             nn.Linear(hidden_size, latent_size),
         )
         # This needs to be an element-wise function for the SDE to satisfy diagonal noise.
-        self.g_nets = nn.ModuleList(
-            [
-                nn.Sequential(
-                    nn.Linear(1, hidden_size),
-                    nn.Softplus(),
-                    nn.Linear(hidden_size, 1),
-                    nn.Sigmoid(),
-                )
-                for _ in range(latent_size)
-            ]
-        )
+        if scalar_diffusion:
+            # scalar_diffusion sets the diffusion to be as simple as possible
+            self.g_nets = nn.ModuleList(
+                [
+                    nn.Sequential(
+                        nn.Linear(1, 1),
+                        nn.Sigmoid(),
+                    )
+                    for _ in range(latent_size)
+                ]
+            )
+        else:
+            # more flexible noise
+            self.g_nets = nn.ModuleList(
+                [
+                    nn.Sequential(
+                        nn.Linear(1, hidden_size),
+                        nn.Softplus(),
+                        nn.Linear(hidden_size, 1),
+                        nn.Sigmoid(),
+                    )
+                    for _ in range(latent_size)
+                ]
+            )
         self.projector = nn.Linear(latent_size, data_size)
 
         self.pz0_mean = nn.Parameter(torch.zeros(1, latent_size))
@@ -336,6 +349,7 @@ def main(
     dt=0.01,
     model="energy",
     data_noise_level=None,
+    scalar_diffusion=False,
 ):
     # Save the set configuration for analysis - these are just the locals at
     # the beginning of the execution
@@ -375,6 +389,7 @@ def main(
         latent_size=latent_size,
         context_size=context_size,
         hidden_size=hidden_size,
+        scalar_diffusion=scalar_diffusion,
     ).to(device)
     optimizer = optim.Adam(params=latent_sde.parameters(), lr=lr_init)
     scheduler = torch.optim.lr_scheduler.ExponentialLR(
