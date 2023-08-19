@@ -254,8 +254,8 @@ def draw_param_to_tipping_rate(configs, infos, ts, param_name, param_title, out,
     # and then choose second item
     tipping_rates_sde = list(zip(*tipping_rates_sde_sorted))[1]
     tipping_rates_data = list(zip(*tipping_rates_data_sorted))[1]
-    plt.scatter(sorted_params, tipping_rates_sde, label="Latent SDE", color="green")
-    plt.scatter(sorted_params, tipping_rates_data, label="Data", color="orange")
+    plt.plot(sorted_params, tipping_rates_sde, label="Latent SDE", color="green")
+    plt.plot(sorted_params, tipping_rates_data, label="Data", color="orange")
     plt.xlabel(param_title)
     plt.xscale(xscale)
     plt.ylabel("Tipping Rate")
@@ -271,7 +271,7 @@ def draw_param_to_info(configs, infos, ts, param_name, param_title, info_name, i
     infos_sorted = sorted(zip(params, [x[ts][info_name] for x in infos]))
     # and then choose second item
     info_values = list(zip(*infos_sorted))[1]
-    plt.scatter(sorted_params, info_values)
+    plt.plot(sorted_params, info_values)
     plt.xlabel(param_title)
     plt.xscale(xscale)
     plt.ylabel(info_title)
@@ -295,7 +295,7 @@ def scatter_param_to_training_info(configs, training_infos, param_name, param_ti
         infos_sorted = sorted(zip(params, [x[training_info_name][-1] for x in training_infos]))
         # and then choose second item
         info_values = list(zip(*infos_sorted))[1]
-        ax.scatter(sorted_params, info_values, color=color)
+        ax.plot(sorted_params, info_values, color=color)
         ax.set_title(f"{param_title} to {training_info_title}")
         ax.set_xlabel(param_title)
         ax.set_ylabel(training_info_title)
