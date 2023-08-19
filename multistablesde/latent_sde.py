@@ -95,7 +95,6 @@ class LatentSDE(nn.Module):
                 [
                     nn.Sequential(
                         nn.Linear(1, 1),
-                        nn.Sigmoid(),
                     )
                     for _ in range(latent_size)
                 ]
