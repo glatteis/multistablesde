@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "a94fad69ab77dcfca00a1d07059b7e5a8fe9ee435608fb3d18e327acb3643fef"
+            "sha256": "1e768080cf8193f17bb29c7001935e8863678eca5ec4b77b04721a5d8bd58faf"
         },
         "pipfile-spec": 6,
         "requires": {},
@@ -51,11 +51,11 @@
         },
         "click": {
             "hashes": [
-                "sha256:48ee849951919527a045bfe3bf7baa8a959c423134e1a5b98c05c20ba75a1cbd",
-                "sha256:fa244bb30b3b5ee2cae3da8f55c9e5e0c0e86093306301fb418eb9dc40fbded5"
+                "sha256:ae74fb96c20a0277a1d615f1e4d73c8414f5a98db8b799a7931d1582f3390c28",
+                "sha256:ca9853ad459e787e2192211578cc907e7594e294c7ccc834310722b41b9ca6de"
             ],
             "markers": "python_version >= '3.7'",
-            "version": "==8.1.6"
+            "version": "==8.1.7"
         },
         "contourpy": {
             "hashes": [
@@ -506,31 +506,6 @@
             "markers": "python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3'",
             "version": "==2.8.2"
         },
-        "scipy": {
-            "hashes": [
-                "sha256:08d957ca82d3535b3b9ba6c8ff355d78fe975271874e2af267cb5add5bd78625",
-                "sha256:249cfa465c379c9bb2c20123001e151ff5e29b351cbb7f9c91587260602c58d0",
-                "sha256:366a6a937110d80dca4f63b3f5b00cc89d36f678b2d124a01067b154e692bab1",
-                "sha256:39154437654260a52871dfde852adf1b93b1d1bc5dc0ffa70068f16ec0be2624",
-                "sha256:396fae3f8c12ad14c5f3eb40499fd06a6fef8393a6baa352a652ecd51e74e029",
-                "sha256:3b9963798df1d8a52db41a6fc0e6fa65b1c60e85d73da27ae8bb754de4792481",
-                "sha256:3e8eb42db36526b130dfbc417609498a6192381abc1975b91e3eb238e0b41c1a",
-                "sha256:512fdc18c65f76dadaca139348e525646d440220d8d05f6d21965b8d4466bccd",
-                "sha256:aec8c62fbe52914f9cf28d846cf0401dd80ab80788bbab909434eb336ed07c04",
-                "sha256:b41a0f322b4eb51b078cb3441e950ad661ede490c3aca66edef66f4b37ab1877",
-                "sha256:b4bb943010203465ac81efa392e4645265077b4d9e99b66cf3ed33ae12254173",
-                "sha256:b588311875c58d1acd4ef17c983b9f1ab5391755a47c3d70b6bd503a45bfaf71",
-                "sha256:ba94eeef3c9caa4cea7b402a35bb02a5714ee1ee77eb98aca1eed4543beb0f4c",
-                "sha256:be8c962a821957fdde8c4044efdab7a140c13294997a407eaee777acf63cbf0c",
-                "sha256:cce154372f0ebe88556ed06d7b196e9c2e0c13080ecb58d0f35062dc7cc28b47",
-                "sha256:d51565560565a0307ed06fa0ec4c6f21ff094947d4844d6068ed04400c72d0c3",
-                "sha256:e866514bc2d660608447b6ba95c8900d591f2865c07cca0aa4f7ff3c4ca70f30",
-                "sha256:fb5b492fa035334fd249f0973cc79ecad8b09c604b42a127a677b45a9a3d4289",
-                "sha256:ffb28e3fa31b9c376d0fb1f74c1f13911c8c154a760312fbee87a21eb21efe31"
-            ],
-            "markers": "python_version >= '3.7'",
-            "version": "==1.11.1"
-        },
         "six": {
             "hashes": [
                 "sha256:1e61c37477a1626458e36f7b1d82aa5c9b094fa4802892072e49de9c60c4c926",
@@ -590,12 +565,13 @@
             "version": "==2.0.1"
         },
         "torchsde": {
+            "editable": true,
+            "git": "https://github.com/glatteis/torchsde",
             "hashes": [
                 "sha256:222be9e15610d37a4b5a71cfa0c442178f9fd9ca02f6522a3e11c370b3d0906b",
                 "sha256:4c34373a94a357bdf60bbfee00c850f3563d634491555820b900c9a4f7eff300"
             ],
-            "index": "pypi",
-            "version": "==0.2.5"
+            "ref": "81b5d20c88dc8eb38850933230c8478a9d265bb4"
         },
         "tqdm": {
             "hashes": [

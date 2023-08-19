@@ -4,7 +4,6 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-torchsde = "*"
 torch = "*"
 fire = "*"
 matplotlib = "*"
@@ -12,6 +11,7 @@ numpy = "*"
 tqdm = "*"
 black = "*"
 tikzplotlib = "*"
+torchsde = {editable = true, ref = "master", git = "https://github.com/glatteis/torchsde"}
 
 [dev-packages]
 

@@ -152,19 +152,22 @@ class LatentSDE(nn.Module):
                 + tuple(self.g_nets.parameters())
                 + tuple(self.h_net.parameters())
             )
-            zs, log_ratio = torchsde.sdeint_adjoint(
+            zs, log_ratio, noise_penalty = torchsde.sdeint_adjoint(
                 self,
                 z0,
                 ts,
                 adjoint_params=adjoint_params,
                 dt=dt,
-                logqp=True,
+                logqp_noise_penalty=True,
                 method=method,
             )
         else:
-            zs, log_ratio = torchsde.sdeint(
-                self, z0, ts, dt=dt, logqp=True, method=method
+            zs, log_ratio, noise_penalty = torchsde.sdeint(
+                self, z0, ts, dt=dt, logqp_noise_penalty=True, method=method
             )
+            
+        # TODO: Use noise_penalty
+        _ = noise_penalty
 
         _xs = self.projector(zs)
         xs_dist = Normal(loc=_xs, scale=noise_std)
@@ -205,18 +208,18 @@ class LatentSDE(nn.Module):
                 + tuple(self.g_nets.parameters())
                 + tuple(self.h_net.parameters())
             )
-            zs, log_ratio = torchsde.sdeint_adjoint(
+            zs, log_ratio, noise_penalty = torchsde.sdeint_adjoint(
                 self,
                 z0,
                 ts,
                 adjoint_params=adjoint_params,
                 dt=dt,
-                logqp=True,
+                logqp_noise_penalty=True,
                 method=method,
             )
         else:
-            zs, log_ratio = torchsde.sdeint(
-                self, z0, ts, dt=dt, logqp=True, method=method
+            zs, log_ratio, noise_penalty = torchsde.sdeint(
+                self, z0, ts, dt=dt, logqp_noise_penalty=True, method=method
             )
 
         _xs = self.projector(zs)
