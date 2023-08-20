@@ -484,6 +484,7 @@ def main(
         "logpxs": recorded_logpxs,
         "lr": recorded_lr,
         "kl_sched": recorded_kl_sched,
+        "noise": recorded_noise,
     }
     with open(f"{train_dir}/training_info.json", "w", encoding="utf8") as f:
         json.dump(training_info, f, ensure_ascii=False, indent=4)

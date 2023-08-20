@@ -280,17 +280,20 @@ def draw_param_to_info(configs, infos, ts, param_name, param_title, info_name, i
     plt.close()
 
 def scatter_param_to_training_info(configs, training_infos, param_name, param_title, out, xscale="linear"):
-    fig, axs = plt.subplots(2, 1, layout="constrained")
+    fig, axs = plt.subplots(3, 1, layout="constrained")
 
     params = [x[param_name] for x in configs]
     sorted_params = sorted(params)
 
     training_info_names = {
         "kl": ("KL Divergence", axs.flat[0], "green"),
-        "logpxs": ("Log-Likelihood", axs.flat[1], "orange")
+        "logpxs": ("Log-Likelihood", axs.flat[1], "orange"),
+        "noise": ("Diffusion Size", axs.flat[1], "blue")
     }
 
     for training_info_name, (training_info_title, ax, color) in training_info_names.items():
+        if training_info_name not in training_infos[0].keys():
+            print(f"No {training_info_name} training info, skippping...")
         # sort by the param, so first zip...
         infos_sorted = sorted(zip(params, [x[training_info_name][-1] for x in training_infos]))
         # and then choose second item
@@ -325,7 +328,7 @@ def run_summary_analysis(model_folders, out):
         "data_noise_level": ("Data Noise Level", "linear"),
         "noise_std": ("Noise Standard Deviation", "log"),
     }
-    
+
     for param_name, (param_title, xscale) in params.items():
         if not param_name in configs[0].keys():
             print(f"No {param_name}, skipping")
