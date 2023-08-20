@@ -153,7 +153,7 @@ def tipping_rate(ts, xs):
     dt = ts[1] - ts[0]
     return tips_counted / dt
 
-def draw_tipping(ts, xs_data, xs_sde, window_size, file, title):
+def draw_tipping(ts, xs_sde, xs_data, window_size, file, title):
     tipping_data = tipping_rate(ts, xs_data).unfold(0, window_size, window_size).mean(dim=1)
     tipping_sde = tipping_rate(ts, xs_sde).unfold(0, window_size, window_size).mean(dim=1)
 
@@ -210,7 +210,7 @@ def run_individual_analysis(model, data):
         posterior = posterior_extrapolated[interval[0]:interval[1], :, :]
         datapoint = datapoint_extrapolated[interval[0]:interval[1], :, :]
 
-        draw_marginals(xs_data, xs_sde, f"{out}/marginals_{name}", title)
+        draw_marginals(xs_sde, xs_data, f"{out}/marginals_{name}", title)
         info_local["wasserstein_distance"] = distance_between_histograms(
             xs_sde, xs_data
         )
@@ -222,7 +222,7 @@ def run_individual_analysis(model, data):
             ts, posterior, datapoint, f"{out}/posterior_{name}", title
         )
 
-        draw_tipping(ts, xs_data, xs_sde, 5, f"{out}/tipping_{name}", title)
+        draw_tipping(ts, xs_sde, xs_data, 5, f"{out}/tipping_{name}", title)
         
         info_local["tipping_rate_data"] = float(tipping_rate(ts, xs_data).sum())
         info_local["tipping_rate_sde"] = float(tipping_rate(ts, xs_sde).sum())
