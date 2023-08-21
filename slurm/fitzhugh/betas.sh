@@ -2,6 +2,8 @@
 fixed_args="multistablesde/latent_sde.py --latent-size=2 --lr_gamma=0.999 --model=fitzhugh"
 
 variable_args=(
+	"--beta=0.01"
+	"--beta=0.1"
 	"--beta=1"
 	"--beta=10"
 	"--beta=100"

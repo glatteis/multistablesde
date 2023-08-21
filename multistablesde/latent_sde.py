@@ -172,7 +172,7 @@ class LatentSDE(nn.Module):
 
         _xs = self.projector(zs)
         xs_dist = Normal(loc=_xs, scale=noise_std)
-        log_pxs = xs_dist.log_prob(xs).sum(dim=(0, 2)).mean(dim=0)
+        log_pxs = dt * xs_dist.log_prob(xs).sum(dim=(0, 2)).mean(dim=0)
 
         qz0 = torch.distributions.Normal(loc=qz0_mean, scale=qz0_logstd.exp())
         pz0 = torch.distributions.Normal(loc=self.pz0_mean, scale=self.pz0_logstd.exp())
