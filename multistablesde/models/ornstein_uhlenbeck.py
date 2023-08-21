@@ -1,6 +1,7 @@
 import torch
 import torchsde
 
+
 class OrnsteinUhlenbeck(object):
     noise_type = "diagonal"
     sde_type = "ito"
@@ -20,6 +21,8 @@ class OrnsteinUhlenbeck(object):
         x0 = (torch.randn(batch_size, 1) * 0.1 + 0.5).to(device)
         xs = torchsde.sdeint(self, x0, ts)
         if normalize:
-            mean, std = torch.mean(xs[0, :, :], dim=(0, 1)), torch.std(xs[0, :, :], dim=(0, 1))
+            mean, std = torch.mean(xs[0, :, :], dim=(0, 1)), torch.std(
+                xs[0, :, :], dim=(0, 1)
+            )
             xs.sub_(mean).div_(std)
         return xs

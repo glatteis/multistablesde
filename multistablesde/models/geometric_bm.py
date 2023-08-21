@@ -20,6 +20,8 @@ class GeometricBM(object):
         x0 = (torch.randn(batch_size, 1) * 0.03**2 + 0.1).to(device)
         xs = torchsde.sdeint(self, x0, ts)
         if normalize:
-            mean, std = torch.mean(xs[0, :, :], dim=(0, 1)), torch.std(xs[0, :, :], dim=(0, 1))
+            mean, std = torch.mean(xs[0, :, :], dim=(0, 1)), torch.std(
+                xs[0, :, :], dim=(0, 1)
+            )
             xs.sub_(mean).div_(std)
         return xs

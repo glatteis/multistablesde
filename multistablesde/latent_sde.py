@@ -65,7 +65,9 @@ class LatentSDE(nn.Module):
     sde_type = "stratonovich"
     noise_type = "diagonal"
 
-    def __init__(self, data_size, latent_size, context_size, hidden_size, scalar_diffusion=False):
+    def __init__(
+        self, data_size, latent_size, context_size, hidden_size, scalar_diffusion=False
+    ):
         super(LatentSDE, self).__init__()
         # Encoder.
         self.encoder = Encoder(
@@ -176,7 +178,7 @@ class LatentSDE(nn.Module):
         pz0 = torch.distributions.Normal(loc=self.pz0_mean, scale=self.pz0_logstd.exp())
         logqp0 = torch.distributions.kl_divergence(qz0, pz0).sum(dim=1).mean(dim=0)
         logqp_path = log_ratio.sum(dim=0).mean(dim=0)
-        
+
         noise = noise_penalty.sum(dim=0).mean(dim=0)
 
         return log_pxs, logqp0 + logqp_path, noise
@@ -340,6 +342,7 @@ def plot_learning(loss, kl, logpxs, noise, lr, kl_sched, img_path):
     plt.savefig(img_path)
     plt.close()
 
+
 def main(
     batch_size=1024,
     latent_size=4,
@@ -431,7 +434,9 @@ def main(
 
     for global_step in tqdm.tqdm(range(1, num_iters + 1)):
         latent_sde.zero_grad()
-        log_pxs, log_ratio, noise = latent_sde(xs, ts, noise_std, adjoint, method, dt=dt)
+        log_pxs, log_ratio, noise = latent_sde(
+            xs, ts, noise_std, adjoint, method, dt=dt
+        )
         loss = -log_pxs + log_ratio * kl_scheduler.val - noise * noise_penalty
         loss.backward()
         optimizer.step()
@@ -488,6 +493,7 @@ def main(
     }
     with open(f"{train_dir}/training_info.json", "w", encoding="utf8") as f:
         json.dump(training_info, f, ensure_ascii=False, indent=4)
+
 
 if __name__ == "__main__":
     print(" ".join(sys.argv))

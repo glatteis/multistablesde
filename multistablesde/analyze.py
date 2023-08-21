@@ -6,7 +6,6 @@ from typing import Sequence
 import fire
 import matplotlib
 import matplotlib.gridspec as gridspec
-import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import tqdm
@@ -23,8 +22,11 @@ import torchsde
 # Wildcard import so that imported files find all classes
 from latent_sde import *
 
+
 def draw_marginals(xs_sde, xs_data, file, title):
-    bins = np.linspace(min(xs_sde.min(), xs_data.min()), max(xs_sde.max(), xs_data.max()), 100)
+    bins = np.linspace(
+        min(xs_sde.min(), xs_data.min()), max(xs_sde.max(), xs_data.max()), 100
+    )
     plt.hist(
         torch.flatten(xs_sde).numpy(),
         bins=bins,
@@ -43,7 +45,8 @@ def draw_marginals(xs_sde, xs_data, file, title):
     )
     plt.legend()
     plt.title(f"Marginals, {title}")
-    plt.savefig(file + ".pdf")
+    plt.tight_layout()
+    plt.savefig(file + extension)
     plt.close()
 
 
@@ -60,12 +63,13 @@ def mean(xs):
 def std(xs):
     return torch.std(xs, dim=(1, 2))
 
+
 def draw_prior(ts, xs_sde, xs_data, file, title):
     fig = plt.figure(layout="constrained")
     gs = gridspec.GridSpec(2, 1, figure=fig)
     latentsde = fig.add_subplot(gs[0, 0])
     data = fig.add_subplot(gs[1, 0])
-    
+
     data.plot(ts, xs_data[:, 0:100, 0], label="Data", color="orange")
     data.set_title("Data")
     xlim = data.get_xlim()
@@ -80,8 +84,10 @@ def draw_prior(ts, xs_sde, xs_data, file, title):
     latentsde.set_xlabel("Time $t$")
     latentsde.set_ylabel("Value $u(t)$")
 
-    plt.savefig(file + ".pdf")
+    plt.tight_layout()
+    plt.savefig(file + extension)
     plt.close()
+
 
 def draw_mean_var(ts, xs_sde, xs_data, file, title):
     mean_sde = mean(xs_sde)
@@ -106,7 +112,8 @@ def draw_mean_var(ts, xs_sde, xs_data, file, title):
     plt.ylabel("Value $u(t)$")
     plt.title(f"95% confidence, {title}")
 
-    plt.savefig(file + ".pdf")
+    plt.tight_layout()
+    plt.savefig(file + extension)
     plt.close()
 
 
@@ -130,32 +137,40 @@ def draw_posterior_around_data(ts, xs_posterior, xs_datapoint, file, title):
     plt.xlabel("Time $t$")
     plt.ylabel("Value $u(t)$")
     plt.title(f"Posterior around data, {title}")
-    plt.savefig(file + ".pdf")
+    plt.tight_layout()
+    plt.savefig(file + extension)
     plt.close()
-    
+
 
 def tipping_rate(ts, xs):
     assert xs.size(dim=2) == 1
     mean_xs = mean(xs)
-    
+
     tips_counted = torch.zeros_like(ts)
-    
+
     for time in range(xs.size(dim=0) - 1):
         tips_counted_here = 0
         for batch in range(xs.size(dim=1)):
             mean_at_time = mean_xs[time]
             before = xs[time, batch, 0]
             after = xs[time + 1, batch, 0]
-            if (before > mean_at_time and after <= mean_at_time) or (before < mean_at_time and after >= mean_at_time):
+            if (before > mean_at_time and after <= mean_at_time) or (
+                before < mean_at_time and after >= mean_at_time
+            ):
                 tips_counted_here += 1
         tips_counted[time] = tips_counted_here
-    
+
     dt = ts[1] - ts[0]
     return tips_counted / dt
 
+
 def draw_tipping(ts, xs_sde, xs_data, window_size, file, title):
-    tipping_data = tipping_rate(ts, xs_data).unfold(0, window_size, window_size).mean(dim=1)
-    tipping_sde = tipping_rate(ts, xs_sde).unfold(0, window_size, window_size).mean(dim=1)
+    tipping_data = (
+        tipping_rate(ts, xs_data).unfold(0, window_size, window_size).mean(dim=1)
+    )
+    tipping_sde = (
+        tipping_rate(ts, xs_sde).unfold(0, window_size, window_size).mean(dim=1)
+    )
 
     plt.plot(ts[::window_size], tipping_sde, color="green", label="Latent SDE")
     plt.plot(ts[::window_size], tipping_data, color="orange", label="Data")
@@ -163,8 +178,10 @@ def draw_tipping(ts, xs_sde, xs_data, window_size, file, title):
     plt.xlabel("Time $t$")
     plt.ylabel("Tipping rate")
     plt.title(f"Observed tips, {title}")
-    plt.savefig(file + ".pdf")
+    plt.tight_layout()
+    plt.savefig(file + extension)
     plt.close()
+
 
 def run_individual_analysis(model, data):
     out = model.replace(".pth", "")
@@ -194,7 +211,10 @@ def run_individual_analysis(model, data):
 
     intervals = {
         "0_firsthalftrain": ((0, len(ts_train) // 2), "First 1/2 training timespan"),
-        "1_secondhalftrain": ((len(ts_train) // 2, len(ts_train)), "Second 1/2 training timespan"),
+        "1_secondhalftrain": (
+            (len(ts_train) // 2, len(ts_train)),
+            "Second 1/2 training timespan",
+        ),
         "2_train": ((0, len(ts_train)), "training timespan"),
         "3_doubletrain": ((0, len(ts_train) * 2), "2 * training timespan"),
         "4_fivetrain": ((0, len(ts_train) * 5), "5 * training timespan"),
@@ -204,11 +224,11 @@ def run_individual_analysis(model, data):
 
     for name, (interval, title) in intervals.items():
         info_local = {}
-        xs_data = tsxs_data["xs"][interval[0]:interval[1], :, :]
-        xs_sde = xs_sde_extrapolated[interval[0]:interval[1], :, :]
-        ts = ts_extrapolated[interval[0]:interval[1]]
-        posterior = posterior_extrapolated[interval[0]:interval[1], :, :]
-        datapoint = datapoint_extrapolated[interval[0]:interval[1], :, :]
+        xs_data = tsxs_data["xs"][interval[0] : interval[1], :, :]
+        xs_sde = xs_sde_extrapolated[interval[0] : interval[1], :, :]
+        ts = ts_extrapolated[interval[0] : interval[1]]
+        posterior = posterior_extrapolated[interval[0] : interval[1], :, :]
+        datapoint = datapoint_extrapolated[interval[0] : interval[1], :, :]
 
         draw_marginals(xs_sde, xs_data, f"{out}/marginals_{name}", title)
         info_local["wasserstein_distance"] = distance_between_histograms(
@@ -223,7 +243,7 @@ def run_individual_analysis(model, data):
         )
 
         draw_tipping(ts, xs_sde, xs_data, 5, f"{out}/tipping_{name}", title)
-        
+
         info_local["tipping_rate_data"] = float(tipping_rate(ts, xs_data).sum())
         info_local["tipping_rate_sde"] = float(tipping_rate(ts, xs_sde).sum())
 
@@ -239,18 +259,26 @@ def run_individual_analysis(model, data):
     plt.xlabel("Time $t$")
     plt.xlabel("Wasserstein Distance")
     plt.title("Wasserstein Distances")
-    plt.savefig(f"{out}/wasserstein.pdf")
+    plt.tight_layout()
+    plt.savefig(f"{out}/wasserstein" + extension)
     plt.close()
 
     with open(f"{out}/info.json", "w", encoding="utf8") as f:
         json.dump(info, f, ensure_ascii=False, indent=4)
 
-def draw_param_to_tipping_rate(configs, infos, ts, param_name, param_title, out, xscale="linear"):
+
+def draw_param_to_tipping_rate(
+    configs, infos, ts, param_name, param_title, out, xscale="linear"
+):
     params = [x[param_name] for x in configs]
     sorted_params = sorted(params)
     # sort by the param, so first zip...
-    tipping_rates_sde_sorted = sorted(zip(params, [x[ts]["tipping_rate_sde"] for x in infos]))
-    tipping_rates_data_sorted = sorted(zip(params, [x[ts]["tipping_rate_data"] for x in infos]))
+    tipping_rates_sde_sorted = sorted(
+        zip(params, [x[ts]["tipping_rate_sde"] for x in infos])
+    )
+    tipping_rates_data_sorted = sorted(
+        zip(params, [x[ts]["tipping_rate_data"] for x in infos])
+    )
     # and then choose second item
     tipping_rates_sde = list(zip(*tipping_rates_sde_sorted))[1]
     tipping_rates_data = list(zip(*tipping_rates_data_sorted))[1]
@@ -261,10 +289,22 @@ def draw_param_to_tipping_rate(configs, infos, ts, param_name, param_title, out,
     plt.ylabel("Tipping Rate")
     plt.legend()
     plt.title(f"{param_title} to Tipping Rates")
-    plt.savefig(f"{out}/tipping_{param_name}_{ts}.pdf")
+    plt.tight_layout()
+    plt.savefig(f"{out}/tipping_{param_name}_{ts}" + extension)
     plt.close()
 
-def draw_param_to_info(configs, infos, ts, param_name, param_title, info_name, info_title, out, xscale="linear"):
+
+def draw_param_to_info(
+    configs,
+    infos,
+    ts,
+    param_name,
+    param_title,
+    info_name,
+    info_title,
+    out,
+    xscale="linear",
+):
     params = [x[param_name] for x in configs]
     sorted_params = sorted(params)
     # sort by the param, so first zip...
@@ -276,10 +316,14 @@ def draw_param_to_info(configs, infos, ts, param_name, param_title, info_name, i
     plt.xscale(xscale)
     plt.ylabel(info_title)
     plt.title(f"{param_title} to {info_title}")
-    plt.savefig(f"{out}/{info_name}_{param_name}_{ts}.pdf")
+    plt.tight_layout()
+    plt.savefig(f"{out}/{info_name}_{param_name}_{ts}" + extension)
     plt.close()
 
-def scatter_param_to_training_info(configs, training_infos, param_name, param_title, out, xscale="linear"):
+
+def scatter_param_to_training_info(
+    configs, training_infos, param_name, param_title, out, xscale="linear"
+):
     fig, axs = plt.subplots(3, 1, layout="constrained")
 
     params = [x[param_name] for x in configs]
@@ -288,15 +332,21 @@ def scatter_param_to_training_info(configs, training_infos, param_name, param_ti
     training_info_names = {
         "kl": ("KL Divergence", axs.flat[0], "green"),
         "logpxs": ("Log-Likelihood", axs.flat[1], "orange"),
-        "noise": ("Diffusion Size", axs.flat[1], "blue")
+        "noise": ("Diffusion Size", axs.flat[1], "blue"),
     }
 
-    for training_info_name, (training_info_title, ax, color) in training_info_names.items():
+    for training_info_name, (
+        training_info_title,
+        ax,
+        color,
+    ) in training_info_names.items():
         if training_info_name not in training_infos[0].keys():
             print(f"No {training_info_name} training info, skippping...")
             continue
         # sort by the param, so first zip...
-        infos_sorted = sorted(zip(params, [x[training_info_name][-1] for x in training_infos]))
+        infos_sorted = sorted(
+            zip(params, [x[training_info_name][-1] for x in training_infos])
+        )
         # and then choose second item
         info_values = list(zip(*infos_sorted))[1]
         ax.plot(sorted_params, info_values, color=color)
@@ -305,8 +355,10 @@ def scatter_param_to_training_info(configs, training_infos, param_name, param_ti
         ax.set_ylabel(training_info_title)
         ax.set_xscale(xscale)
         ax.set_yscale("symlog")
-    plt.savefig(f"{out}/training_info_{param_name}.pdf")
+    plt.tight_layout()
+    plt.savefig(f"{out}/training_info_{param_name}" + extension)
     plt.close()
+
 
 def run_summary_analysis(model_folders, out):
     print(f"Writing summary analysis to folder {out}")
@@ -320,9 +372,9 @@ def run_summary_analysis(model_folders, out):
     configs = [json.loads(Path(f).read_text()) for f in config_jsons]
     infos = [json.loads(Path(f).read_text()) for f in info_jsons]
     training_infos = [json.loads(Path(f).read_text()) for f in training_info_jsons]
-    
+
     timespans = infos[0].keys()
-    
+
     params = {
         "beta": ("Beta", "log"),
         "context_size": ("Context Size", "linear"),
@@ -342,15 +394,58 @@ def run_summary_analysis(model_folders, out):
         if params.count(params[0]) == len(params):
             print(f"Only same value in {param_name}, skipping")
             continue
-    
+
         for ts in timespans:
-            draw_param_to_tipping_rate(configs, infos, ts, param_name, param_title, out, xscale=xscale)
+            draw_param_to_tipping_rate(
+                configs, infos, ts, param_name, param_title, out, xscale=xscale
+            )
 
-            draw_param_to_info(configs, infos, ts, param_name, param_title, "wasserstein_distance", "Wasserstein Distance", out, xscale=xscale)
+            draw_param_to_info(
+                configs,
+                infos,
+                ts,
+                param_name,
+                param_title,
+                "wasserstein_distance",
+                "Wasserstein Distance",
+                out,
+                xscale=xscale,
+            )
 
-        scatter_param_to_training_info(configs, training_infos, param_name, param_title, out, xscale=xscale)
+        scatter_param_to_training_info(
+            configs, training_infos, param_name, param_title, out, xscale=xscale
+        )
 
-def main(model=None, data=None, folder=None):
+
+def main(model=None, data=None, folder=None, pgf=False):
+    global extension
+    global plt
+    if pgf:
+        matplotlib.use("pgf")
+        extension = ".pgf"
+    else:
+        extension = ".pdf"
+    import matplotlib.pyplot as plt
+
+    if pgf:
+        # from https://jwalton.info/Matplotlib-latex-PGF/
+        plt.rcParams.update(
+            {
+                "font.family": "serif",  # use serif/main font for text elements
+                "text.usetex": True,  # use inline math for ticks
+                "pgf.rcfonts": False,  # don't setup fonts from rc parameters
+            }
+        )
+    plt.rcParams.update(
+        {
+            "figure.figsize": (5, 3),
+            "axes.spines.right": False,
+            "axes.spines.top": False,
+            "xtick.top": False,
+            "ytick.right": False,
+        }
+    )
+
     # automatically walk through folder and find data.pth / model.pth pairs
     # also run analysis on entire benchmark
 
