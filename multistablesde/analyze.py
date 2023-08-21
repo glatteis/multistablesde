@@ -159,15 +159,15 @@ def tipping_rate(ts, xs):
 
     tips_counted = torch.zeros_like(ts)
 
-    bifurcation = bifurcation(xs)
+    bif = bifurcation(xs)
 
     for time in range(xs.size(dim=0) - 1):
         tips_counted_here = 0
         for batch in range(xs.size(dim=1)):
             before = xs[time, batch, 0]
             after = xs[time + 1, batch, 0]
-            if (before > bifurcation and after <= bifurcation) or (
-                before < bifurcation and after >= bifurcation
+            if (before > bif and after <= bif) or (
+                before < bif and after >= bif
             ):
                 tips_counted_here += 1
         tips_counted[time] = tips_counted_here
