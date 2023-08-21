@@ -66,13 +66,14 @@ def std(xs):
 
 def bifurcation(xs):
     flattened_xs = xs.flatten()
-    search_space = np.linspace(-1.0, 1.0, num=1000)
+    search_space = np.linspace(-1.5, 1.5, num=1000)
     distances = [
         ((flattened_xs - torch.full_like(flattened_xs, point)) ** 2).sum()
         for point in search_space
     ]
     min_point = np.argmin(distances)
     assert min_point != 0 and min_point != len(search_space) - 1
+        
     return search_space[min_point]
 
 
