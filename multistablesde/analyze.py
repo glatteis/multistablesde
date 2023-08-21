@@ -64,6 +64,18 @@ def std(xs):
     return torch.std(xs, dim=(1, 2))
 
 
+def bifurcation(xs):
+    flattened_xs = xs.flatten()
+    search_space = np.linspace(-1.0, 1.0, num=1000)
+    distances = [
+        ((flattened_xs - torch.full_like(flattened_xs, point)) ** 2).sum()
+        for point in search_space
+    ]
+    min_point = np.argmin(distances)
+    assert min_point != 0 and min_point != len(search_space) - 1
+    return search_space[min_point]
+
+
 def draw_prior(ts, xs_sde, xs_data, file, title):
     fig = plt.figure(layout="constrained")
     gs = gridspec.GridSpec(2, 1, figure=fig)
@@ -144,18 +156,18 @@ def draw_posterior_around_data(ts, xs_posterior, xs_datapoint, file, title):
 
 def tipping_rate(ts, xs):
     assert xs.size(dim=2) == 1
-    mean_xs = mean(xs)
 
     tips_counted = torch.zeros_like(ts)
+
+    bifurcation = bifurcation(xs)
 
     for time in range(xs.size(dim=0) - 1):
         tips_counted_here = 0
         for batch in range(xs.size(dim=1)):
-            mean_at_time = mean_xs[time]
             before = xs[time, batch, 0]
             after = xs[time + 1, batch, 0]
-            if (before > mean_at_time and after <= mean_at_time) or (
-                before < mean_at_time and after >= mean_at_time
+            if (before > bifurcation and after <= bifurcation) or (
+                before < bifurcation and after >= bifurcation
             ):
                 tips_counted_here += 1
         tips_counted[time] = tips_counted_here
@@ -246,6 +258,8 @@ def run_individual_analysis(model, data):
 
         info_local["tipping_rate_data"] = float(tipping_rate(ts, xs_data).sum())
         info_local["tipping_rate_sde"] = float(tipping_rate(ts, xs_sde).sum())
+
+        info_local["bifurcation"] = bifurcation(xs_sde)
 
         info[name] = info_local
 
@@ -412,6 +426,18 @@ def run_summary_analysis(model_folders, out):
                 xscale=xscale,
             )
 
+            draw_param_to_info(
+                configs,
+                infos,
+                ts,
+                param_name,
+                param_title,
+                "bifurcation",
+                "Bifurcation",
+                out,
+                xscale=xscale,
+            )
+
         scatter_param_to_training_info(
             configs, training_infos, param_name, param_title, out, xscale=xscale
         )
@@ -462,7 +488,7 @@ def main(model=None, data=None, folder=None, pgf=False):
         assert all([os.path.exists(x) for x in data_files])
         models_and_data = list(zip(model_files, data_files))
 
-    for (model, data) in models_and_data:
+    for model, data in models_and_data:
         run_individual_analysis(model, data)
 
     # if we ran a batch analyze, run the meta-analysis as well
