@@ -294,6 +294,7 @@ def scatter_param_to_training_info(configs, training_infos, param_name, param_ti
     for training_info_name, (training_info_title, ax, color) in training_info_names.items():
         if training_info_name not in training_infos[0].keys():
             print(f"No {training_info_name} training info, skippping...")
+            continue
         # sort by the param, so first zip...
         infos_sorted = sorted(zip(params, [x[training_info_name][-1] for x in training_infos]))
         # and then choose second item
@@ -327,6 +328,7 @@ def run_summary_analysis(model_folders, out):
         "context_size": ("Context Size", "linear"),
         "data_noise_level": ("Data Noise Level", "linear"),
         "noise_std": ("Noise Standard Deviation", "log"),
+        "noise_penalty": ("Noise Penalty", "log"),
     }
 
     for param_name, (param_title, xscale) in params.items():
@@ -365,8 +367,8 @@ def main(model=None, data=None, folder=None):
         assert all([os.path.exists(x) for x in data_files])
         models_and_data = list(zip(model_files, data_files))
 
-    for (model, data) in models_and_data:
-        run_individual_analysis(model, data)
+    # for (model, data) in models_and_data:
+    #     run_individual_analysis(model, data)
 
     # if we ran a batch analyze, run the meta-analysis as well
     if folder is not None:
