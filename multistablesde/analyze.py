@@ -73,7 +73,7 @@ def bifurcation(xs):
     ]
     min_point = np.argmin(distances)
     assert min_point != 0 and min_point != len(search_space) - 1
-        
+
     return search_space[min_point]
 
 
@@ -167,9 +167,7 @@ def tipping_rate(ts, xs):
         for batch in range(xs.size(dim=1)):
             before = xs[time, batch, 0]
             after = xs[time + 1, batch, 0]
-            if (before > bif and after <= bif) or (
-                before < bif and after >= bif
-            ):
+            if (before > bif and after <= bif) or (before < bif and after >= bif):
                 tips_counted_here += 1
         tips_counted[time] = tips_counted_here
 
@@ -228,9 +226,9 @@ def run_individual_analysis(model, data):
             (len(ts_train) // 2, len(ts_train)),
             "Second 1/2 training timespan",
         ),
-        "2_train": ((0, len(ts_train)), "training timespan"),
-        "3_doubletrain": ((0, len(ts_train) * 2), "2 * training timespan"),
-        "4_fivetrain": ((0, len(ts_train) * 5), "5 * training timespan"),
+        "2_train": ((0, len(ts_train)), "Training timespan"),
+        "3_doubletrain": ((0, len(ts_train) * 2), "2 * Training timespan"),
+        "4_fivetrain": ((0, len(ts_train) * 5), "5 * Training timespan"),
     }
 
     info = {}
@@ -260,7 +258,8 @@ def run_individual_analysis(model, data):
         info_local["tipping_rate_data"] = float(tipping_rate(ts, xs_data).sum())
         info_local["tipping_rate_sde"] = float(tipping_rate(ts, xs_sde).sum())
 
-        info_local["bifurcation"] = bifurcation(xs_sde)
+        info_local["bifurcation_data"] = bifurcation(xs_data)
+        info_local["bifurcation_sde"] = bifurcation(xs_sde)
 
         info[name] = info_local
 
@@ -282,17 +281,26 @@ def run_individual_analysis(model, data):
         json.dump(info, f, ensure_ascii=False, indent=4)
 
 
-def draw_param_to_tipping_rate(
-    configs, infos, ts, param_name, param_title, out, xscale="linear"
+def draw_param_to_info_both(
+    configs,
+    infos,
+    ts,
+    ts_title,
+    param_name,
+    param_title,
+    info_name,
+    info_title,
+    out,
+    xscale="linear",
 ):
     params = [x[param_name] for x in configs]
     sorted_params = sorted(params)
     # sort by the param, so first zip...
     tipping_rates_sde_sorted = sorted(
-        zip(params, [x[ts]["tipping_rate_sde"] for x in infos])
+        zip(params, [x[ts][f"{info_name}_sde"] for x in infos])
     )
     tipping_rates_data_sorted = sorted(
-        zip(params, [x[ts]["tipping_rate_data"] for x in infos])
+        zip(params, [x[ts][f"{info_name}_data"] for x in infos])
     )
     # and then choose second item
     tipping_rates_sde = list(zip(*tipping_rates_sde_sorted))[1]
@@ -301,11 +309,11 @@ def draw_param_to_tipping_rate(
     plt.plot(sorted_params, tipping_rates_data, label="Data", color="orange")
     plt.xlabel(param_title)
     plt.xscale(xscale)
-    plt.ylabel("Tipping Rate")
+    plt.ylabel(info_title)
     plt.legend()
-    plt.title(f"{param_title} to Tipping Rates")
+    plt.title(f"{param_title} to {info_title}, {ts_title}")
     plt.tight_layout()
-    plt.savefig(f"{out}/tipping_{param_name}_{ts}" + extension)
+    plt.savefig(f"{out}/{info_name}_{param_name}_{ts}" + extension)
     plt.close()
 
 
@@ -313,6 +321,7 @@ def draw_param_to_info(
     configs,
     infos,
     ts,
+    ts_title,
     param_name,
     param_title,
     info_name,
@@ -330,7 +339,7 @@ def draw_param_to_info(
     plt.xlabel(param_title)
     plt.xscale(xscale)
     plt.ylabel(info_title)
-    plt.title(f"{param_title} to {info_title}")
+    plt.title(f"{param_title} to {info_title}, {ts_title}")
     plt.tight_layout()
     plt.savefig(f"{out}/{info_name}_{param_name}_{ts}" + extension)
     plt.close()
@@ -339,20 +348,17 @@ def draw_param_to_info(
 def scatter_param_to_training_info(
     configs, training_infos, param_name, param_title, out, xscale="linear"
 ):
-    fig, axs = plt.subplots(3, 1, layout="constrained")
-
     params = [x[param_name] for x in configs]
     sorted_params = sorted(params)
 
     training_info_names = {
-        "kl": ("KL Divergence", axs.flat[0], "green"),
-        "logpxs": ("Log-Likelihood", axs.flat[1], "orange"),
-        "noise": ("Diffusion Size", axs.flat[1], "blue"),
+        "kl": ("KL Divergence", "green"),
+        "logpxs": ("Log-Likelihood", "orange"),
+        "noise": ("Diffusion Size", "blue"),
     }
 
     for training_info_name, (
         training_info_title,
-        ax,
         color,
     ) in training_info_names.items():
         if training_info_name not in training_infos[0].keys():
@@ -364,15 +370,16 @@ def scatter_param_to_training_info(
         )
         # and then choose second item
         info_values = list(zip(*infos_sorted))[1]
-        ax.plot(sorted_params, info_values, color=color)
-        ax.set_title(f"{param_title} to {training_info_title}")
-        ax.set_xlabel(param_title)
-        ax.set_ylabel(training_info_title)
-        ax.set_xscale(xscale)
-        ax.set_yscale("symlog")
-    plt.tight_layout()
-    plt.savefig(f"{out}/training_info_{param_name}" + extension)
-    plt.close()
+        plt.plot(sorted_params, info_values, color=color)
+        plt.title(f"{param_title} to {training_info_title}")
+        plt.xlabel(param_title)
+        plt.ylabel(training_info_title)
+        plt.xscale(xscale)
+        plt.tight_layout()
+        plt.savefig(
+            f"{out}/training_info_{param_name}_{training_info_name}" + extension
+        )
+        plt.close()
 
 
 def run_summary_analysis(model_folders, out):
@@ -389,6 +396,14 @@ def run_summary_analysis(model_folders, out):
     training_infos = [json.loads(Path(f).read_text()) for f in training_info_jsons]
 
     timespans = infos[0].keys()
+
+    intervals = {
+        "0_firsthalftrain": "First 1/2 training timespan",
+        "1_secondhalftrain": "Second 1/2 training timespan",
+        "2_train": "Training timespan",
+        "3_doubletrain": "2 * Training timespan",
+        "4_fivetrain": "5 * Training timespan",
+    }
 
     params = {
         "beta": ("Beta", "log"),
@@ -411,18 +426,28 @@ def run_summary_analysis(model_folders, out):
             continue
 
         for ts in timespans:
-            draw_param_to_tipping_rate(
-                configs, infos, ts, param_name, param_title, out, xscale=xscale
-            )
-
-            draw_param_to_info(
+            draw_param_to_info_both(
                 configs,
                 infos,
                 ts,
+                intervals[ts],
                 param_name,
                 param_title,
-                "wasserstein_distance",
-                "Wasserstein Distance",
+                "tipping_rate",
+                "Tipping Rate",
+                out,
+                xscale=xscale,
+            )
+
+            draw_param_to_info_both(
+                configs,
+                infos,
+                ts,
+                intervals[ts],
+                param_name,
+                param_title,
+                "bifurcation",
+                "Bifurcation",
                 out,
                 xscale=xscale,
             )
@@ -431,10 +456,11 @@ def run_summary_analysis(model_folders, out):
                 configs,
                 infos,
                 ts,
+                intervals[ts],
                 param_name,
                 param_title,
-                "bifurcation",
-                "Bifurcation",
+                "wasserstein_distance",
+                "Wasserstein Distance",
                 out,
                 xscale=xscale,
             )
