@@ -171,7 +171,7 @@ class LatentSDE(nn.Module):
             )
 
         #_xs = self.projector(zs)
-        _xs = zs
+        _xs = zs[:, :, 0:1]
         xs_dist = Normal(loc=_xs, scale=noise_std)
         log_pxs = dt * xs_dist.log_prob(xs).sum(dim=(0, 2)).mean(dim=0)
 
@@ -193,7 +193,7 @@ class LatentSDE(nn.Module):
         zs = torchsde.sdeint(self, z0, ts, names={"drift": "h"}, dt=dt, bm=bm)
         # Most of the times in ML, we don't sample the observation noise for visualization purposes.
         # _xs = self.projector(zs)
-        _xs = zs
+        _xs = zs[:, :, 0:1]
         return _xs
 
     @torch.no_grad()
@@ -229,7 +229,7 @@ class LatentSDE(nn.Module):
             )
 
         # _xs = self.projector(zs)
-        _xs = zs
+        _xs = zs[:, :, 0:1]
         return _xs, log_ratio, noise_penalty
 
 
