@@ -444,7 +444,7 @@ def run_summary_analysis(model_folders, out):
         )
 
 
-def main(model=None, data=None, folder=None, pgf=False):
+def main(model=None, data=None, folder=None, pgf=False, only_summary=False):
     global extension
     global plt
     if pgf:
@@ -489,8 +489,9 @@ def main(model=None, data=None, folder=None, pgf=False):
         assert all([os.path.exists(x) for x in data_files])
         models_and_data = list(zip(model_files, data_files))
 
-    for model, data in models_and_data:
-        run_individual_analysis(model, data)
+    if not only_summary:
+        for model, data in models_and_data:
+            run_individual_analysis(model, data)
 
     # if we ran a batch analyze, run the meta-analysis as well
     if folder is not None:
