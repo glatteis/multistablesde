@@ -14,6 +14,7 @@ import sys
 import math
 import json
 from typing import Sequence
+import random
 
 import time
 
@@ -250,6 +251,8 @@ def make_dataset(
         t0, t1_extrapolated, steps=steps_extrapolated, device=device
     )
 
+    torch.manual_seed(84127381238)
+    random.seed(84127381238)
     xs_extrapolated = model.sample(
         batch_size, ts_extrapolated.to(device), normalize=True, device=device
     )

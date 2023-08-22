@@ -24,6 +24,7 @@ from latent_sde import *
 
 
 def draw_marginals(xs_sde, xs_data, file, title):
+    plt.tight_layout()
     bins = np.linspace(
         min(xs_sde.min(), xs_data.min()), max(xs_sde.max(), xs_data.max()), 100
     )
@@ -45,7 +46,6 @@ def draw_marginals(xs_sde, xs_data, file, title):
     )
     plt.legend()
     plt.title(f"Marginals, {title}")
-    plt.tight_layout()
     plt.savefig(file + extension)
     plt.close()
 
@@ -66,18 +66,16 @@ def std(xs):
 
 def bifurcation(xs):
     flattened_xs = xs.flatten()
-    search_space = np.linspace(-1.5, 1.5, num=1000)
-    distances = [
-        ((flattened_xs - torch.full_like(flattened_xs, point)) ** 2).sum()
-        for point in search_space
-    ]
-    min_point = np.argmin(distances)
+    search_space = np.linspace(-1.5, 1.5, num=100)
+    histogram, _ = np.histogram(flattened_xs, bins=search_space)
+    min_point = np.argmin(histogram)
     assert min_point != 0 and min_point != len(search_space) - 1
 
     return search_space[min_point]
 
 
 def draw_prior(ts, xs_sde, xs_data, file, title):
+    plt.tight_layout()
     fig = plt.figure(layout="constrained")
     gs = gridspec.GridSpec(2, 1, figure=fig)
     latentsde = fig.add_subplot(gs[0, 0])
@@ -97,12 +95,12 @@ def draw_prior(ts, xs_sde, xs_data, file, title):
     latentsde.set_xlabel("Time $t$")
     latentsde.set_ylabel("Value $u(t)$")
 
-    plt.tight_layout()
     plt.savefig(file + extension)
     plt.close()
 
 
 def draw_mean_var(ts, xs_sde, xs_data, file, title):
+    plt.tight_layout()
     mean_sde = mean(xs_sde)
     conf_sde = std(xs_sde) * 1.96
 
@@ -125,12 +123,12 @@ def draw_mean_var(ts, xs_sde, xs_data, file, title):
     plt.ylabel("Value $u(t)$")
     plt.title(f"95% confidence, {title}")
 
-    plt.tight_layout()
     plt.savefig(file + extension)
     plt.close()
 
 
 def draw_posterior_around_data(ts, xs_posterior, xs_datapoint, file, title):
+    plt.tight_layout()
     fig, ax = plt.subplots()
     mean_posterior = mean(xs_posterior)
     conf_posterior = std(xs_posterior) * 1.96
@@ -150,7 +148,6 @@ def draw_posterior_around_data(ts, xs_posterior, xs_datapoint, file, title):
     plt.xlabel("Time $t$")
     plt.ylabel("Value $u(t)$")
     plt.title(f"Posterior around data, {title}")
-    plt.tight_layout()
     plt.savefig(file + extension)
     plt.close()
 
@@ -176,6 +173,7 @@ def tipping_rate(ts, xs):
 
 
 def draw_tipping(ts, xs_sde, xs_data, window_size, file, title):
+    plt.tight_layout()
     tipping_data = (
         tipping_rate(ts, xs_data).unfold(0, window_size, window_size).mean(dim=1)
     )
@@ -189,17 +187,22 @@ def draw_tipping(ts, xs_sde, xs_data, window_size, file, title):
     plt.xlabel("Time $t$")
     plt.ylabel("Tipping rate")
     plt.title(f"Observed tips, {title}")
-    plt.tight_layout()
     plt.savefig(file + extension)
     plt.close()
 
 
-def run_individual_analysis(model, data):
+def run_individual_analysis(model, data, show_params=False):
+    plt.tight_layout()
     out = model.replace(".pth", "")
     os.makedirs(out, exist_ok=True)
     print(f"Writing individual analysis to folder {out}")
 
     latent_sde = torch.load(model, map_location=torch.device("cpu"))
+    if show_params:
+        print(f"Parameters of model {model}:")
+        for name, param in latent_sde.named_parameters():
+            if param.requires_grad:
+                print(name, param)
     tsxs_data = torch.load(data, map_location=torch.device("cpu"))
 
     ts_train = tsxs_data["ts_train"]
@@ -273,7 +276,6 @@ def run_individual_analysis(model, data):
     plt.xlabel("Time $t$")
     plt.xlabel("Wasserstein Distance")
     plt.title("Wasserstein Distances")
-    plt.tight_layout()
     plt.savefig(f"{out}/wasserstein" + extension)
     plt.close()
 
@@ -293,6 +295,7 @@ def draw_param_to_info_both(
     out,
     xscale="linear",
 ):
+    plt.tight_layout()
     params = [x[param_name] for x in configs]
     sorted_params = sorted(params)
     # sort by the param, so first zip...
@@ -312,7 +315,6 @@ def draw_param_to_info_both(
     plt.ylabel(info_title)
     plt.legend()
     plt.title(f"{param_title} to {info_title}, {ts_title}")
-    plt.tight_layout()
     plt.savefig(f"{out}/{info_name}_{param_name}_{ts}" + extension)
     plt.close()
 
@@ -329,6 +331,7 @@ def draw_param_to_info(
     out,
     xscale="linear",
 ):
+    plt.tight_layout()
     params = [x[param_name] for x in configs]
     sorted_params = sorted(params)
     # sort by the param, so first zip...
@@ -340,7 +343,6 @@ def draw_param_to_info(
     plt.xscale(xscale)
     plt.ylabel(info_title)
     plt.title(f"{param_title} to {info_title}, {ts_title}")
-    plt.tight_layout()
     plt.savefig(f"{out}/{info_name}_{param_name}_{ts}" + extension)
     plt.close()
 
@@ -361,6 +363,7 @@ def scatter_param_to_training_info(
         training_info_title,
         color,
     ) in training_info_names.items():
+        plt.tight_layout()
         if training_info_name not in training_infos[0].keys():
             print(f"No {training_info_name} training info, skippping...")
             continue
@@ -375,7 +378,6 @@ def scatter_param_to_training_info(
         plt.xlabel(param_title)
         plt.ylabel(training_info_title)
         plt.xscale(xscale)
-        plt.tight_layout()
         plt.savefig(
             f"{out}/training_info_{param_name}_{training_info_name}" + extension
         )
@@ -470,7 +472,7 @@ def run_summary_analysis(model_folders, out):
         )
 
 
-def main(model=None, data=None, folder=None, pgf=False, only_summary=False):
+def main(model=None, data=None, folder=None, pgf=False, only_summary=False, show_params=False):
     global extension
     global plt
     if pgf:
@@ -508,6 +510,7 @@ def main(model=None, data=None, folder=None, pgf=False, only_summary=False):
     if folder is None:
         # just run the analysis script on this one file
         models_and_data = [(model, data)]
+        folder = os.path.dirname(model)
     else:
         model_files = glob.glob(f"{folder}/**/model.pth", recursive=True)
         model_folders = [os.path.dirname(x) for x in model_files]
@@ -517,7 +520,7 @@ def main(model=None, data=None, folder=None, pgf=False, only_summary=False):
 
     if not only_summary:
         for model, data in models_and_data:
-            run_individual_analysis(model, data)
+            run_individual_analysis(model, data, show_params=show_params)
 
     # if we ran a batch analyze, run the meta-analysis as well
     if folder is not None:
