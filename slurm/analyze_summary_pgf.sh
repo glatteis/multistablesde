@@ -23,4 +23,4 @@ module purge
 cd ~/multistablesde/
 
 # run analyze.py on specified folder
-srun python3 -m pipenv run python multistablesde/analyze.py -f $1 --only-summary
+srun python3 -m pipenv run python multistablesde/analyze.py -f $1 --only-summary --pgf

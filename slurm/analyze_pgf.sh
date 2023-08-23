@@ -2,7 +2,8 @@
 
 #SBATCH --job-name=analyze
 #SBATCH --account=thes1544
-#SBATCH --cpus-per-task=4
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=10G
 #SBATCH --time=08:00:00
 #SBATCH --output=/rwthfs/rz/cluster/home/wx133755/output/%x.%A_%4a.out
 
