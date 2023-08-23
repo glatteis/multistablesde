@@ -383,6 +383,7 @@ def main(
     data_noise_level=None,
     scalar_diffusion=False,
     noise_penalty=0.0,
+    noise_penalty_iters=1000,
 ):
     # Save the set configuration for analysis - these are just the locals at
     # the beginning of the execution
@@ -429,6 +430,7 @@ def main(
         optimizer=optimizer, gamma=lr_gamma
     )
     kl_scheduler = LinearScheduler(iters=kl_anneal_iters, maxval=beta)
+    noise_penalty_scheduler = LinearScheduler(iters=noise_penalty_iters, maxval=noise_penalty)
 
     # Fix the same Brownian motion for visualization.
     bm_vis = torchsde.BrownianInterval(
@@ -448,17 +450,19 @@ def main(
     recorded_noise = []
     recorded_lr = []
     recorded_kl_sched = []
+    recorded_noise_sched = []
 
     for global_step in tqdm.tqdm(range(1, num_iters + 1)):
         latent_sde.zero_grad()
         log_pxs, log_ratio, noise = latent_sde(
             xs, ts, noise_std, adjoint, method, dt=dt
         )
-        loss = -log_pxs + log_ratio * kl_scheduler.val - noise * noise_penalty
+        loss = -log_pxs + log_ratio * kl_scheduler.val - noise * noise_penalty_scheduler.val
         loss.backward()
         optimizer.step()
         scheduler.step()
         kl_scheduler.step()
+        noise_penalty_scheduler.step()
 
         lr_now = optimizer.param_groups[0]["lr"]
         recorded_loss.append(float(loss))
@@ -467,6 +471,7 @@ def main(
         recorded_noise.append(float(noise))
         recorded_lr.append(float(lr_now))
         recorded_kl_sched.append(float(kl_scheduler.val))
+        recorded_noise_sched.append(float(noise_penalty_scheduler.val))
 
         if (global_step % pause_every == 0 and global_step != 0) or global_step == 1:
             logging.warning(
@@ -506,6 +511,7 @@ def main(
         "logpxs": recorded_logpxs,
         "lr": recorded_lr,
         "kl_sched": recorded_kl_sched,
+        "noise_sched": recorded_noise_sched,
         "noise": recorded_noise,
     }
     with open(f"{train_dir}/training_info.json", "w", encoding="utf8") as f:
