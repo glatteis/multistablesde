@@ -11,6 +11,8 @@ class StochasticEnergyBalance(object):
     solarconstant = 1363.0
     radiation = 0.6 * 5.67e-8
     noise_var = 0.08
+    
+    state_space_size = 1
 
     def albedo(self, u):
         return self.albedo_0 - (self.albedo_var / 2.0) * torch.tanh(u - 273.0)
@@ -32,10 +34,10 @@ class StochasticEnergyBalance(object):
         return torch.cat([f], dim=1)
 
     @torch.no_grad()
-    def sample(self, batch_size, ts, normalize, device):
+    def sample(self, batch_size, ts, normalize, device, bm=None):
         x0 = ((torch.randn(batch_size, 1) * 20.0) + 270.0).to(device)
         """Sample data for training. Store data normalization constants if necessary."""
-        xs = torchsde.sdeint(self, x0, ts)
+        xs = torchsde.sdeint(self, x0, ts, bm=bm)
         if normalize:
             mean, std = torch.mean(xs[0, :, :], dim=(0, 1)), torch.std(
                 xs[0, :, :], dim=(0, 1)

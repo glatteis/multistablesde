@@ -251,11 +251,22 @@ def make_dataset(
         t0, t1_extrapolated, steps=steps_extrapolated, device=device
     )
 
-    torch.manual_seed(84127381238)
-    random.seed(84127381238)
-    xs_extrapolated = model.sample(
-        batch_size, ts_extrapolated.to(device), normalize=True, device=device
+    bm = torchsde.BrownianInterval(
+        t0=t0,
+        t1=t1_extrapolated,
+        size=(
+            batch_size,
+            model.state_space_size,
+        ),
+        device=device,
+        levy_area_approximation="space-time",
+        entropy=48123 # seed (generate the same data if models are the same)
     )
+    torch.manual_seed(48123)
+    xs_extrapolated = model.sample(
+        batch_size, ts_extrapolated.to(device), normalize=True, device=device, bm=bm
+    )
+    torch.seed()
     xs_train = xs_extrapolated[0:steps_train, :, :]
 
     os.makedirs(os.path.dirname(data_path), exist_ok=True)
