@@ -490,7 +490,7 @@ def run_summary_analysis(model_folders, out):
                 xscale=xscale,
                 save=False
             )
-            plt.size((5, 3))
+            plt.rcParams["figure.figsize"] = (5, 3)
             plt.tight_layout()
             plt.legend()
             plt.savefig(f"{out}/custom_wasserstein" + extension)
