@@ -23,12 +23,12 @@ import torchsde
 from latent_sde import *
 
 interval_names = {
-    "0_firsthalftrain": "$(0, \\frac{t_{train}}{2})$",
-    "1_secondhalftrain": "$(\\frac{t_{train}}{2}, t_{train})$",
+    "0_firsthalftrain": "$(0, 0.5{t_{train}})$",
+    "1_secondhalftrain": "$(0.5{t_{train}}, t_{train})$",
     "2_train": "$(0, t_{train})$",
     "3_doubletrain": "$(0, 2 t_{train})$",
     "4_fivetrain": "$(0, 5 t_{train})$",
-    "5_onlyextra": "$(t_{train}, 5 t_{train})$",
+    "5_halftofivetrain": "$(0.5{t_{train}}, 5 t_{train})$",
 }
 
 
@@ -42,6 +42,7 @@ def draw_marginals(xs_sde, xs_data, file, title):
         alpha=0.25,
         label="Latent SDE",
         edgecolor="black",
+        color="green",
         linewidth=1.2,
     )
     plt.hist(
@@ -50,6 +51,7 @@ def draw_marginals(xs_sde, xs_data, file, title):
         alpha=0.25,
         label="Data",
         edgecolor="black",
+        color="orange",
         linewidth=1.2,
     )
     plt.legend()
@@ -241,7 +243,7 @@ def run_individual_analysis(model, data, show_params=False):
         "2_train": (0, len(ts_train)),
         "3_doubletrain": (0, len(ts_train) * 2),
         "4_fivetrain": (0, len(ts_train) * 5),
-        "5_onlyextra": (len(ts_train), len(ts_train) * 5),
+        "5_halftofivetrain": (len(ts_train) // 2, len(ts_train) * 5),
     }
 
     info = {}
@@ -502,7 +504,7 @@ def run_summary_analysis(model_folders, out):
         plt.close()
 
         # custom tipping rate plot
-        for ts in ["1_secondhalftrain", "5_onlyextra"]:
+        for ts in ["1_secondhalftrain", "5_halftofivetrain"]:
             draw_param_to_info(
                 configs,
                 infos,
