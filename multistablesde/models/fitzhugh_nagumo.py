@@ -14,7 +14,7 @@ class FitzHughNagumo(object):
     sigmax = 4.46
     sigmay = 0.0
     beta = -1.51
-    
+
     state_space_size = 2
 
     # drift(u, fhn::FitzHughNagumoModel, t) = [driftx(u, fhn, t), drifty(u, fhn, t)]

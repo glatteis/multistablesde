@@ -27,6 +27,7 @@ import tqdm
 from torch import nn
 from torch import optim
 from torch.distributions import Normal
+import pandas as pd
 
 import torchsde
 
@@ -117,7 +118,7 @@ class LatentSDE(nn.Module):
                     for _ in range(latent_size)
                 ]
             )
-        #self.projector = nn.Linear(latent_size, data_size)
+        # self.projector = nn.Linear(latent_size, data_size)
 
         self.pz0_mean = nn.Parameter(torch.zeros(1, latent_size))
         self.pz0_logstd = nn.Parameter(torch.zeros(1, latent_size))
@@ -171,7 +172,7 @@ class LatentSDE(nn.Module):
                 self, z0, ts, dt=dt, logqp_noise_penalty=True, method=method
             )
 
-        #_xs = self.projector(zs)
+        # _xs = self.projector(zs)
         _xs = zs[:, :, 0:1]
         xs_dist = Normal(loc=_xs, scale=noise_std)
         log_pxs = dt * xs_dist.log_prob(xs).sum(dim=(0, 2)).mean(dim=0)
@@ -242,6 +243,7 @@ def make_dataset(
     model, t0, t1, t1_extrapolated, dt, batch_size, noise_std, train_dir, device
 ):
     data_path = os.path.join(train_dir, "data.pth")
+    data_path_csv = os.path.join(train_dir, "data.csv")
 
     steps_train = steps(t0, t1, dt)
     steps_extrapolated = steps(t0, t1_extrapolated, dt)
@@ -260,7 +262,7 @@ def make_dataset(
         ),
         device=device,
         levy_area_approximation="space-time",
-        entropy=48123 # seed (generate the same data if models are the same)
+        entropy=48123,  # seed (generate the same data if models are the same)
     )
     torch.manual_seed(48123)
     xs_extrapolated = model.sample(
@@ -279,6 +281,16 @@ def make_dataset(
         },
         data_path,
     )
+    pd.DataFrame(
+        torch.transpose(
+            torch.cat((ts_extrapolated.unsqueeze(1).unsqueeze(1), xs_extrapolated), 1)[
+                :, :, 0
+            ],
+            0,
+            1,
+        ).numpy()
+    ).to_csv(data_path_csv)
+
     logging.warning(f"Stored data at: {data_path}")
 
     return xs_train.to(device), ts.to(device).to(device)
@@ -430,7 +442,9 @@ def main(
         optimizer=optimizer, gamma=lr_gamma
     )
     kl_scheduler = LinearScheduler(iters=kl_anneal_iters, maxval=beta)
-    noise_penalty_scheduler = LinearScheduler(iters=noise_penalty_iters, maxval=noise_penalty)
+    noise_penalty_scheduler = LinearScheduler(
+        iters=noise_penalty_iters, maxval=noise_penalty
+    )
 
     # Fix the same Brownian motion for visualization.
     bm_vis = torchsde.BrownianInterval(
@@ -457,7 +471,11 @@ def main(
         log_pxs, log_ratio, noise = latent_sde(
             xs, ts, noise_std, adjoint, method, dt=dt
         )
-        loss = -log_pxs + log_ratio * kl_scheduler.val - noise * noise_penalty_scheduler.val
+        loss = (
+            -log_pxs
+            + log_ratio * kl_scheduler.val
+            - noise * noise_penalty_scheduler.val
+        )
         loss.backward()
         optimizer.step()
         scheduler.step()

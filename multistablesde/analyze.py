@@ -472,7 +472,9 @@ def run_summary_analysis(model_folders, out):
         )
 
 
-def main(model=None, data=None, folder=None, pgf=False, only_summary=False, show_params=False):
+def main(
+    model=None, data=None, folder=None, pgf=False, only_summary=False, show_params=False
+):
     global extension
     global plt
     if pgf:

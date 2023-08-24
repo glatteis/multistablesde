@@ -8,7 +8,7 @@ class GeometricBM(object):
 
     mu = 1.0
     sigma = 0.5
-    
+
     state_space_size = 1
 
     def f(self, t, y):

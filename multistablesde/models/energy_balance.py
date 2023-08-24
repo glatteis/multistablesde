@@ -11,7 +11,7 @@ class StochasticEnergyBalance(object):
     solarconstant = 1363.0
     radiation = 0.6 * 5.67e-8
     noise_var = 0.08
-    
+
     state_space_size = 1
 
     def albedo(self, u):
