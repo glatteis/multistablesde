@@ -30,7 +30,7 @@ def draw_marginals(xs_sde, xs_data, file, title):
     plt.hist(
         torch.flatten(xs_sde).numpy(),
         bins=bins,
-        alpha=0.5,
+        alpha=0.25,
         label="Latent SDE",
         edgecolor="black",
         linewidth=1.2,
@@ -38,7 +38,7 @@ def draw_marginals(xs_sde, xs_data, file, title):
     plt.hist(
         torch.flatten(xs_data).numpy(),
         bins=bins,
-        alpha=0.5,
+        alpha=0.25,
         label="Data",
         edgecolor="black",
         linewidth=1.2,
