@@ -490,10 +490,13 @@ def run_summary_analysis(model_folders, out):
                 xscale=xscale,
                 save=False
             )
-            plt.rcParams["figure.figsize"] = (5, 3)
+            old_figsize = plt.rcParams["figure.figsize"]
+            plt.rcParams["figure.figsize"] = (5, 1.8)
             plt.tight_layout(pad=0.3)
             plt.legend()
             plt.savefig(f"{out}/custom_wasserstein" + extension)
+            plt.close()
+            plt.rcParams["figure.figsize"] = old_figsize
 
         scatter_param_to_training_info(
             configs, training_infos, param_name, param_title, out, xscale=xscale
