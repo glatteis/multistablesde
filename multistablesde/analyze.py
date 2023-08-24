@@ -250,8 +250,8 @@ def run_individual_analysis(model, data, show_params=False):
             xs_sde, xs_data
         )
 
-        draw_xs(ts, xs_sde[:, 0:100, 0], f"{out}/prior_{name}", f"Prior, {title}")
-        draw_xs(ts, xs_data[:, 0:100, 0], f"{out}/data_{name}", f"Data, {title}")
+        draw_xs(ts, xs_sde[:, 0:30, 0], f"{out}/prior_{name}", f"Prior, {title}")
+        draw_xs(ts, xs_data[:, 0:30, 0], f"{out}/data_{name}", f"Data, {title}")
 
         draw_mean_var(ts, xs_sde, xs_data, f"{out}/mean_var_{name}", title)
 
