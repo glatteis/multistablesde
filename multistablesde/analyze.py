@@ -44,7 +44,7 @@ def draw_marginals(xs_sde, xs_data, file, title):
         linewidth=1.2,
     )
     plt.legend()
-    plt.title(f"Marginals, {title}")
+    # plt.title(f"Marginals, {title}")
     plt.tight_layout()
     plt.savefig(file + extension)
     plt.close()
@@ -81,7 +81,7 @@ def draw_xs(ts, xs, file, title, save=True):
     
     plt.ylim(-4, 4)
 
-    plt.title(title)
+    # plt.title(title)
     if save:
         plt.tight_layout()
         plt.savefig(file + extension)
@@ -108,7 +108,7 @@ def draw_mean_var(ts, xs_sde, xs_data, file, title):
     ax.legend()
     plt.xlabel("Time $t$")
     plt.ylabel("Value $u(t)$")
-    plt.title(f"95% confidence, {title}")
+    # plt.title(f"95% confidence, {title}")
 
     plt.tight_layout()
     plt.savefig(file + extension)
@@ -134,7 +134,7 @@ def draw_posterior_around_data(ts, xs_posterior, xs_datapoint, file, title):
 
     plt.xlabel("Time $t$")
     plt.ylabel("Value $u(t)$")
-    plt.title(f"Posterior around data, {title}")
+    # plt.title(f"Posterior around data, {title}")
     plt.tight_layout()
     plt.savefig(file + extension)
     plt.close()
@@ -186,7 +186,7 @@ def draw_tipping(ts, xs_sde, xs_data, window_size, file, title):
     plt.legend()
     plt.xlabel("Time $t$")
     plt.ylabel("Tipping rate")
-    plt.title(f"Observed tips, {title}")
+    # plt.title(f"Observed tips, {title}")
     plt.tight_layout()
     plt.savefig(file + extension)
     plt.close()
@@ -278,7 +278,7 @@ def run_individual_analysis(model, data, show_params=False):
     plt.plot(ts_extrapolated[1:], wasserstein_distances)
     plt.xlabel("Time $t$")
     plt.xlabel("Wasserstein Distance")
-    plt.title("Wasserstein Distances")
+    # plt.title("Wasserstein Distances")
     plt.tight_layout()
     plt.savefig(f"{out}/wasserstein" + extension)
     plt.close()
@@ -317,7 +317,7 @@ def draw_param_to_info_both(
     plt.xscale(xscale)
     plt.ylabel(info_title)
     plt.legend()
-    plt.title(f"{param_title} to {info_title}, {ts_title}")
+    # plt.title(f"{param_title} to {info_title}, {ts_title}")
     plt.tight_layout()
     plt.savefig(f"{out}/{info_name}_{param_name}_{ts}" + extension)
     plt.close()
@@ -347,7 +347,7 @@ def draw_param_to_info(
     plt.xscale(xscale)
     plt.ylabel(info_title)
     if save:
-        plt.title(f"{param_title} to {info_title}, {ts_title}")
+        # plt.title(f"{param_title} to {info_title}, {ts_title}")
         plt.tight_layout()
         plt.savefig(f"{out}/{info_name}_{param_name}_{ts}" + extension)
         plt.close()
@@ -379,7 +379,7 @@ def scatter_param_to_training_info(
         # and then choose second item
         info_values = list(zip(*infos_sorted))[1]
         plt.plot(sorted_params, info_values, color=color)
-        plt.title(f"{param_title} to {training_info_title}")
+        # plt.title(f"{param_title} to {training_info_title}")
         plt.xlabel(param_title)
         plt.ylabel(training_info_title)
         plt.xscale(xscale)
@@ -490,6 +490,7 @@ def run_summary_analysis(model_folders, out):
                 xscale=xscale,
                 save=False
             )
+            plt.size((5, 3))
             plt.tight_layout()
             plt.legend()
             plt.savefig(f"{out}/custom_wasserstein" + extension)
@@ -522,7 +523,7 @@ def main(
         )
     plt.rcParams.update(
         {
-            "figure.figsize": (5, 3),
+            "figure.figsize": (5/2, 3/2),
             "axes.spines.right": False,
             "axes.spines.top": False,
             "xtick.top": False,
