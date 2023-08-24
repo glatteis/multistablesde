@@ -22,6 +22,15 @@ import torchsde
 # Wildcard import so that imported files find all classes
 from latent_sde import *
 
+interval_names = {
+    "0_firsthalftrain": "$(0, \\frac{t_{train}}{2})$",
+    "1_secondhalftrain": "$(\\frac{t_{train}}{2}, t_{train})$",
+    "2_train": "$(0, t_{train})$",
+    "3_doubletrain": "$(0, 2 t_{train})$",
+    "4_fivetrain": "$(0, 5 t_{train})$",
+    "5_onlyextra": "$(t_{train}, 5 t_{train})$",
+}
+
 
 def draw_marginals(xs_sde, xs_data, file, title):
     bins = np.linspace(
@@ -46,7 +55,7 @@ def draw_marginals(xs_sde, xs_data, file, title):
     plt.legend()
     # plt.title(f"Marginals, {title}")
     plt.xlabel("Value $u(t)$")
-    plt.xlabel("Frequency")
+    plt.ylabel("Frequency")
     plt.tight_layout(pad=0.3)
     plt.savefig(file + extension)
     plt.close()
@@ -80,7 +89,7 @@ def draw_xs(ts, xs, file, title, save=True):
     plt.plot(ts, xs, label="Data", linewidth=0.5)
     plt.xlabel("Time $t$")
     plt.ylabel("Value $u(t)$")
-    
+
     plt.ylim(-4, 4)
 
     # plt.title(title)
@@ -88,6 +97,7 @@ def draw_xs(ts, xs, file, title, save=True):
         plt.tight_layout(pad=0.3)
         plt.savefig(file + extension)
         plt.close()
+
 
 def draw_mean_var(ts, xs_sde, xs_data, file, title):
     mean_sde = mean(xs_sde)
@@ -172,7 +182,7 @@ def tipping_rate(ts, xs):
     # print(tips_counted == tips_counted_alternative)
 
     dt = ts[1] - ts[0]
-    return tips_counted / dt
+    return tips_counted / (dt * (ts[-1] - ts[0]))
 
 
 def draw_tipping(ts, xs_sde, xs_data, window_size, file, title):
@@ -226,20 +236,19 @@ def run_individual_analysis(model, data, show_params=False):
     assert ts_train[0] == 0.0
 
     intervals = {
-        "0_firsthalftrain": ((0, len(ts_train) // 2), "First 1/2 training timespan"),
-        "1_secondhalftrain": (
-            (len(ts_train) // 2, len(ts_train)),
-            "Second 1/2 training timespan",
-        ),
-        "2_train": ((0, len(ts_train)), "Training timespan"),
-        "3_doubletrain": ((0, len(ts_train) * 2), "2 * Training timespan"),
-        "4_fivetrain": ((0, len(ts_train) * 5), "5 * Training timespan"),
+        "0_firsthalftrain": (0, len(ts_train) // 2),
+        "1_secondhalftrain": (len(ts_train) // 2, len(ts_train)),
+        "2_train": (0, len(ts_train)),
+        "3_doubletrain": (0, len(ts_train) * 2),
+        "4_fivetrain": (0, len(ts_train) * 5),
+        "5_onlyextra": (len(ts_train), len(ts_train) * 5),
     }
 
     info = {}
 
-    for name, (interval, title) in intervals.items():
-        
+    for name, interval in intervals.items():
+        title = interval_names[name]
+
         info_local = {}
         xs_data = tsxs_data["xs"][interval[0] : interval[1], :, :]
         xs_sde = xs_sde_extrapolated[interval[0] : interval[1], :, :]
@@ -319,6 +328,7 @@ def draw_param_to_info_both(
     plt.xscale(xscale)
     plt.ylabel(info_title)
     plt.legend()
+
     # plt.title(f"{param_title} to {info_title}, {ts_title}")
     plt.tight_layout(pad=0.3)
     plt.savefig(f"{out}/{info_name}_{param_name}_{ts}" + extension)
@@ -336,7 +346,7 @@ def draw_param_to_info(
     info_title,
     out,
     xscale="linear",
-    save=True
+    save=True,
 ):
     params = [x[param_name] for x in configs]
     sorted_params = sorted(params)
@@ -407,14 +417,6 @@ def run_summary_analysis(model_folders, out):
 
     timespans = infos[0].keys()
 
-    intervals = {
-        "0_firsthalftrain": "$(0, \\frac{t_{train}}{2})$",
-        "1_secondhalftrain": "$(\\frac{t_{train}}{2}, t_{train})$",
-        "2_train": "$(0, t_{train})$",
-        "3_doubletrain": "$(0, 2 t_{train})$",
-        "4_fivetrain": "$(0, 5 t_{train})$",
-    }
-
     params = {
         "beta": ("$\\beta$", "log"),
         "context_size": ("Context Size", "linear"),
@@ -440,7 +442,7 @@ def run_summary_analysis(model_folders, out):
                 configs,
                 infos,
                 ts,
-                intervals[ts],
+                interval_names[ts],
                 param_name,
                 param_title,
                 "tipping_rate",
@@ -453,7 +455,7 @@ def run_summary_analysis(model_folders, out):
                 configs,
                 infos,
                 ts,
-                intervals[ts],
+                interval_names[ts],
                 param_name,
                 param_title,
                 "bifurcation",
@@ -466,7 +468,7 @@ def run_summary_analysis(model_folders, out):
                 configs,
                 infos,
                 ts,
-                intervals[ts],
+                interval_names[ts],
                 param_name,
                 param_title,
                 "wasserstein_distance",
@@ -474,7 +476,7 @@ def run_summary_analysis(model_folders, out):
                 out,
                 xscale=xscale,
             )
-   
+
         # custom summary plots!
 
         old_figsize = plt.rcParams["figure.figsize"]
@@ -485,19 +487,54 @@ def run_summary_analysis(model_folders, out):
                 configs,
                 infos,
                 ts,
-                intervals[ts],
+                interval_names[ts],
                 param_name,
                 param_title,
                 "wasserstein_distance",
                 "Wasserstein Distance",
                 out,
                 xscale=xscale,
-                save=False
+                save=False,
             )
         plt.tight_layout(pad=0.3)
         plt.legend()
         plt.savefig(f"{out}/custom_wasserstein" + extension)
         plt.close()
+
+        # custom tipping rate plot
+        for ts in ["1_secondhalftrain", "5_onlyextra"]:
+            draw_param_to_info(
+                configs,
+                infos,
+                ts,
+                f"Latent SDE, {interval_names[ts]}",
+                param_name,
+                param_title,
+                "tipping_rate_sde",
+                "Tipping Rate",
+                out,
+                xscale=xscale,
+                save=False,
+            )
+            draw_param_to_info(
+                configs,
+                infos,
+                ts,
+                f"Data, {interval_names[ts]}",
+                param_name,
+                param_title,
+                "tipping_rate_data",
+                "Tipping Rate",
+                out,
+                xscale=xscale,
+                save=False,
+            )
+        plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+        plt.tight_layout(pad=0.3)
+
+        plt.savefig(f"{out}/custom_tipping" + extension)
+        plt.close()
+
         plt.rcParams["figure.figsize"] = old_figsize
 
         scatter_param_to_training_info(
