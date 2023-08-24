@@ -74,30 +74,18 @@ def bifurcation(xs):
     return search_space[min_point]
 
 
-def draw_prior(ts, xs_sde, xs_data, file, title):
-    fig = plt.figure(layout="constrained")
-    gs = gridspec.GridSpec(2, 1, figure=fig)
-    latentsde = fig.add_subplot(gs[0, 0])
-    data = fig.add_subplot(gs[1, 0])
+def draw_xs(ts, xs, file, title, save=True):
+    plt.plot(ts, xs, label="Data", linewidth=0.5)
+    plt.xlabel("Time $t$")
+    plt.ylabel("Value $u(t)$")
+    
+    plt.ylim(-4, 4)
 
-    data.plot(ts, xs_data[:, 0:100, 0], label="Data", color="orange")
-    data.set_title("Data")
-    xlim = data.get_xlim()
-    ylim = data.get_ylim()
-    data.set_xlabel("Time $t$")
-    data.set_ylabel("Value $u(t)$")
-
-    latentsde.plot(ts, xs_sde[:, 0:100, 0], label="Latent SDE", color="green")
-    latentsde.set_title("Latent SDE")
-    latentsde.set_xlim(xlim)
-    latentsde.set_ylim(ylim)
-    latentsde.set_xlabel("Time $t$")
-    latentsde.set_ylabel("Value $u(t)$")
-
-    plt.tight_layout()
-    plt.savefig(file + extension)
-    plt.close()
-
+    plt.title(title)
+    if save:
+        plt.tight_layout()
+        plt.savefig(file + extension)
+        plt.close()
 
 def draw_mean_var(ts, xs_sde, xs_data, file, title):
     mean_sde = mean(xs_sde)
@@ -159,14 +147,27 @@ def tipping_rate(ts, xs):
 
     bif = bifurcation(xs)
 
-    for time in range(xs.size(dim=0) - 1):
-        tips_counted_here = 0
-        for batch in range(xs.size(dim=1)):
-            before = xs[time, batch, 0]
-            after = xs[time + 1, batch, 0]
-            if (before > bif and after <= bif) or (before < bif and after >= bif):
-                tips_counted_here += 1
-        tips_counted[time] = tips_counted_here
+    xs_relative = (xs - bif)[:, :, 0]
+    # now, positive == above bifurcation, negative == below
+    cat_zeros = torch.zeros((1, xs_relative.size(dim=1)))
+    xs_relative_1 = torch.cat([cat_zeros, xs_relative])
+    xs_relative_2 = torch.cat([xs_relative, cat_zeros])
+    xs_diff = xs_relative_1 * xs_relative_2
+    tips_counted = torch.vmap(lambda x: x < 0)(xs_diff).sum(dim=1)[1:]
+
+    # checked against this simpler, slower implementation :-)
+    # for time in range(xs.size(dim=0) - 1):
+    #     tips_counted_here = 0
+    #     before = xs[time, :, 0]
+    #     after = xs[time + 1, :, 0]
+    #     for batch in range(xs.size(dim=1)):
+    #         before = xs[time, batch, 0]
+    #         after = xs[time + 1, batch, 0]
+    #         if (before > bif and after <= bif) or (before < bif and after >= bif):
+    #             tips_counted_here += 1
+    #     tips_counted[time] = tips_counted_here
+
+    # print(tips_counted == tips_counted_alternative)
 
     dt = ts[1] - ts[0]
     return tips_counted / dt
@@ -236,6 +237,7 @@ def run_individual_analysis(model, data, show_params=False):
     info = {}
 
     for name, (interval, title) in intervals.items():
+        
         info_local = {}
         xs_data = tsxs_data["xs"][interval[0] : interval[1], :, :]
         xs_sde = xs_sde_extrapolated[interval[0] : interval[1], :, :]
@@ -248,7 +250,9 @@ def run_individual_analysis(model, data, show_params=False):
             xs_sde, xs_data
         )
 
-        draw_prior(ts, xs_sde, xs_data, f"{out}/prior_{name}", title)
+        draw_xs(ts, xs_sde[:, 0:100, 0], f"{out}/prior_{name}", f"Prior, {title}")
+        draw_xs(ts, xs_data[:, 0:100, 0], f"{out}/data_{name}", f"Data, {title}")
+
         draw_mean_var(ts, xs_sde, xs_data, f"{out}/mean_var_{name}", title)
 
         draw_posterior_around_data(
@@ -330,6 +334,7 @@ def draw_param_to_info(
     info_title,
     out,
     xscale="linear",
+    save=True
 ):
     params = [x[param_name] for x in configs]
     sorted_params = sorted(params)
@@ -337,14 +342,15 @@ def draw_param_to_info(
     infos_sorted = sorted(zip(params, [x[ts][info_name] for x in infos]))
     # and then choose second item
     info_values = list(zip(*infos_sorted))[1]
-    plt.plot(sorted_params, info_values)
+    plt.plot(sorted_params, info_values, label=ts_title)
     plt.xlabel(param_title)
     plt.xscale(xscale)
     plt.ylabel(info_title)
-    plt.title(f"{param_title} to {info_title}, {ts_title}")
-    plt.tight_layout()
-    plt.savefig(f"{out}/{info_name}_{param_name}_{ts}" + extension)
-    plt.close()
+    if save:
+        plt.title(f"{param_title} to {info_title}, {ts_title}")
+        plt.tight_layout()
+        plt.savefig(f"{out}/{info_name}_{param_name}_{ts}" + extension)
+        plt.close()
 
 
 def scatter_param_to_training_info(
@@ -400,15 +406,15 @@ def run_summary_analysis(model_folders, out):
     timespans = infos[0].keys()
 
     intervals = {
-        "0_firsthalftrain": "First 1/2 training timespan",
-        "1_secondhalftrain": "Second 1/2 training timespan",
-        "2_train": "Training timespan",
-        "3_doubletrain": "2 * Training timespan",
-        "4_fivetrain": "5 * Training timespan",
+        "0_firsthalftrain": "$(0, \\frac{t_{train}}{2})$",
+        "1_secondhalftrain": "$(\\frac{t_{train}}{2}, t_{train})$",
+        "2_train": "$(0, t_{train})$",
+        "3_doubletrain": "$(0, 2 t_{train})$",
+        "4_fivetrain": "$(0, 5 t_{train})$",
     }
 
     params = {
-        "beta": ("Beta", "log"),
+        "beta": ("$\\beta$", "log"),
         "context_size": ("Context Size", "linear"),
         "data_noise_level": ("Data Noise Level", "linear"),
         "noise_std": ("Noise Standard Deviation", "log"),
@@ -466,6 +472,27 @@ def run_summary_analysis(model_folders, out):
                 out,
                 xscale=xscale,
             )
+   
+        # custom summary plots!
+
+        # custom wasserstein distance plot
+        for ts in ["2_train", "4_fivetrain"]:
+            draw_param_to_info(
+                configs,
+                infos,
+                ts,
+                intervals[ts],
+                param_name,
+                param_title,
+                "wasserstein_distance",
+                "Wasserstein Distance",
+                out,
+                xscale=xscale,
+                save=False
+            )
+            plt.tight_layout()
+            plt.legend()
+            plt.savefig(f"{out}/custom_wasserstein" + extension)
 
         scatter_param_to_training_info(
             configs, training_infos, param_name, param_title, out, xscale=xscale
