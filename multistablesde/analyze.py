@@ -45,6 +45,8 @@ def draw_marginals(xs_sde, xs_data, file, title):
     )
     plt.legend()
     # plt.title(f"Marginals, {title}")
+    plt.xlabel("Value $u(t)$")
+    plt.xlabel("Frequency")
     plt.tight_layout(pad=0.3)
     plt.savefig(file + extension)
     plt.close()
