@@ -523,7 +523,8 @@ def main(
         )
     plt.rcParams.update(
         {
-            "figure.figsize": (5/2, 3/2),
+            "figure.figsize": (3, 2),
+            "font.size": 8,
             "axes.spines.right": False,
             "axes.spines.top": False,
             "xtick.top": False,
