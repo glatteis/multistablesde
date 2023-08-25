@@ -531,7 +531,7 @@ def run_summary_analysis(model_folders, out):
                 xscale=xscale,
                 save=False,
             )
-        plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+        plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
         plt.tight_layout(pad=0.3)
 
         plt.savefig(f"{out}/custom_tipping" + extension)

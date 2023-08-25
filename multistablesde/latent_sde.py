@@ -288,7 +288,9 @@ def make_dataset(
             ],
             0,
             1,
-        ).numpy()
+        )
+        .cpu()
+        .numpy()
     ).to_csv(data_path_csv)
 
     logging.warning(f"Stored data at: {data_path}")
