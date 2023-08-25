@@ -484,7 +484,7 @@ def run_summary_analysis(model_folders, out):
         old_figsize = plt.rcParams["figure.figsize"]
         plt.rcParams["figure.figsize"] = (5, 1.8)
         # custom wasserstein distance plot
-        for ts in ["2_train", "4_fivetrain"]:
+        for ts in ["1_secondhalftrain", "5_halftofivetrain"]:
             draw_param_to_info(
                 configs,
                 infos,
