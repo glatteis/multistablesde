@@ -234,6 +234,8 @@ def run_individual_analysis(model, data, show_params=False):
         datapoint_extrapolated_repeated, ts_extrapolated
     )
 
+    draw_phase_portrait(latent_sde.h, np.linspace(-2, 2, 20), np.linspace(-2, 2, 20), out)
+
     # assumptions: ts_train[0] == 0, ts_train is evenly spaced
     assert ts_train[0] == 0.0
 
@@ -543,6 +545,23 @@ def run_summary_analysis(model_folders, out):
             configs, training_infos, param_name, param_title, out, xscale=xscale
         )
 
+def draw_phase_portrait(h, y1, y2, out):
+    # adapted from https://kitchingroup.cheme.cmu.edu/blog/2013/02/21/Phase-portraits-of-a-system-of-ODEs/
+    g1, g2 = np.meshgrid(y1, y2)
+    out1 = np.zeros(g1.shape)
+    out2 = np.zeros(g2.shape)
+    t = 0
+    for i in range(len(y1)):
+        for j in range(len(y2)):
+            x = g1[i, j]
+            y = g2[i, j]
+            out1[i, j], out2[i, j] = map(float, h(t, torch.tensor([[x, y]], dtype=torch.float32))[0])
+
+    plt.quiver(g1, g2, out1, out2, (out1**2 + out2**2)**0.5)
+    plt.xlabel('$y_1$')
+    plt.ylabel('$y_2$')
+    plt.tight_layout(pad=0.3)
+    plt.savefig(f"{out}/phase_portrait" + extension)
 
 def main(
     model=None, data=None, folder=None, pgf=False, only_summary=False, show_params=False
