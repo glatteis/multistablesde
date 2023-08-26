@@ -234,7 +234,7 @@ def run_individual_analysis(model, data, show_params=False):
         datapoint_extrapolated_repeated, ts_extrapolated
     )
 
-    if int(latent_sde.pz0_mean.shape[1:]) == 2:
+    if latent_sde.pz0_mean.shape[1:][0] == 2:
         draw_phase_portrait(latent_sde.h, np.linspace(-1, 1, 20), np.linspace(-1, 1, 20), out)
 
     # assumptions: ts_train[0] == 0, ts_train is evenly spaced
