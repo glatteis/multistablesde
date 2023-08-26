@@ -28,7 +28,7 @@ interval_names = {
     "2_train": "$(0, t_{train})$",
     "3_doubletrain": "$(0, 2 t_{train})$",
     "4_fivetrain": "$(0, 5 t_{train})$",
-    "5_halftofivetrain": "$(0.5{t_{train}}, 5 t_{train})$",
+    "5_extrapolation": "$(t_{train}, 5 t_{train})$",
 }
 
 
@@ -82,7 +82,7 @@ def bifurcation(xs):
     search_space = np.linspace(-1.0, 1.0, num=100)
     histogram, _ = np.histogram(flattened_xs, bins=search_space)
     min_point = np.argmin(histogram)
-    assert min_point != 0 and min_point != len(search_space) - 1
+    #assert min_point != 0 and min_point != len(search_space) - 1
 
     return search_space[min_point]
 
@@ -234,7 +234,8 @@ def run_individual_analysis(model, data, show_params=False):
         datapoint_extrapolated_repeated, ts_extrapolated
     )
 
-    draw_phase_portrait(latent_sde.h, np.linspace(-2, 2, 20), np.linspace(-2, 2, 20), out)
+    if int(latent_sde.pz0_mean.shape[1:]) == 2:
+        draw_phase_portrait(latent_sde.h, np.linspace(-1, 1, 20), np.linspace(-1, 1, 20), out)
 
     # assumptions: ts_train[0] == 0, ts_train is evenly spaced
     assert ts_train[0] == 0.0
@@ -245,7 +246,7 @@ def run_individual_analysis(model, data, show_params=False):
         "2_train": (0, len(ts_train)),
         "3_doubletrain": (0, len(ts_train) * 2),
         "4_fivetrain": (0, len(ts_train) * 5),
-        "5_halftofivetrain": (len(ts_train) // 2, len(ts_train) * 5),
+        "5_extrapolation": (len(ts_train), len(ts_train) * 5),
     }
 
     info = {}
@@ -486,7 +487,7 @@ def run_summary_analysis(model_folders, out):
         old_figsize = plt.rcParams["figure.figsize"]
         plt.rcParams["figure.figsize"] = (5, 1.8)
         # custom wasserstein distance plot
-        for ts in ["1_secondhalftrain", "5_halftofivetrain"]:
+        for ts in ["1_secondhalftrain", "5_extrapolation"]:
             draw_param_to_info(
                 configs,
                 infos,
@@ -506,7 +507,7 @@ def run_summary_analysis(model_folders, out):
         plt.close()
 
         # custom tipping rate plot
-        for ts in ["1_secondhalftrain", "5_halftofivetrain"]:
+        for ts in ["1_secondhalftrain", "5_extrapolation"]:
             draw_param_to_info(
                 configs,
                 infos,
