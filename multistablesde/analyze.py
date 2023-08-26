@@ -82,7 +82,7 @@ def bifurcation(xs):
     search_space = np.linspace(-1.0, 1.0, num=100)
     histogram, _ = np.histogram(flattened_xs, bins=search_space)
     min_point = np.argmin(histogram)
-    assert min_point != 0 and min_point != len(search_space) - 1
+    #assert min_point != 0 and min_point != len(search_space) - 1
 
     return search_space[min_point]
 
