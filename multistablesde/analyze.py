@@ -427,7 +427,8 @@ def run_summary_analysis(model_folders, out):
         "context_size": ("Context Size", "linear"),
         "data_noise_level": ("Data Noise Level", "linear"),
         "noise_std": ("Noise Standard Deviation", "log"),
-        "noise_penalty": ("Noise Penalty", "log"),
+        "noise_penalty": ("Noise Penalty", "linear"),
+        "batch_size": ("Size of Dataset", "log"),
     }
 
     for param_name, (param_title, xscale) in params.items():
