@@ -16,6 +16,7 @@ import scipy.stats
 import json
 import glob
 from pathlib import Path
+import math
 
 import torchsde
 
@@ -235,7 +236,8 @@ def run_individual_analysis(model, data, show_params=False):
     )
 
     if latent_sde.pz0_mean.shape[1:][0] == 2:
-        draw_phase_portrait(latent_sde.h, np.linspace(-1, 1, 20), np.linspace(-1, 1, 20), out)
+        draw_phase_portrait(latent_sde, f"{out}/phase_portrait")
+        draw_phase_portrait(FitzHughNagumo(), f"{out}/phase_portrait_fhn")
 
     # assumptions: ts_train[0] == 0, ts_train is evenly spaced
     assert ts_train[0] == 0.0
@@ -547,23 +549,47 @@ def run_summary_analysis(model_folders, out):
             configs, training_infos, param_name, param_title, out, xscale=xscale
         )
 
-def draw_phase_portrait(h, y1, y2, out):
+def draw_phase_portrait(sde, out):
+    batch_size = 2 
+    ts = torch.linspace(0, 4, steps=400)
+    if isinstance(sde, FitzHughNagumo):
+        trajectories = sde.sample(batch_size, ts, False, "cpu", project=False).numpy()
+        sde_func = sde.f
+    else:
+        trajectories = sde.sample(batch_size, ts, project=False).numpy()
+        sde_func = sde.h
+
+    for i in range(batch_size):
+        plt.plot(trajectories[:, i, 0:1], trajectories[:, i, 1:2], linewidth=0.8, color="orange")
+    
+    y1 = np.linspace(*plt.xlim(), 20)
+    y2 = np.linspace(*plt.ylim(), 20)
+    
     # adapted from https://kitchingroup.cheme.cmu.edu/blog/2013/02/21/Phase-portraits-of-a-system-of-ODEs/
     g1, g2 = np.meshgrid(y1, y2)
     out1 = np.zeros(g1.shape)
     out2 = np.zeros(g2.shape)
     t = 0
+    
+    # https://stackoverflow.com/questions/24490753/logarithmic-lenghts-in-plotting-arrows-with-quiver-function-from-pyplot
+    def transform(u, v):
+        arrow_lengths = np.sqrt(u*u + v*v)
+        len_adjust_factor = np.log10(arrow_lengths + 1) / arrow_lengths
+        return u*len_adjust_factor, v*len_adjust_factor
+
     for i in range(len(y1)):
         for j in range(len(y2)):
             x = g1[i, j]
             y = g2[i, j]
-            out1[i, j], out2[i, j] = map(float, h(t, torch.tensor([[x, y]], dtype=torch.float32))[0])
+            dx, dy = map(float, sde_func(t, torch.tensor([[x, y]], dtype=torch.float32))[0])
+            out1[i, j], out2[i, j] = transform(dx, dy)
 
     plt.quiver(g1, g2, out1, out2, (out1**2 + out2**2)**0.5)
     plt.xlabel('$y_1$')
     plt.ylabel('$y_2$')
     plt.tight_layout(pad=0.3)
-    plt.savefig(f"{out}/phase_portrait" + extension)
+    plt.savefig(out + extension)
+    plt.close()
 
 def main(
     model=None, data=None, folder=None, pgf=False, only_summary=False, show_params=False

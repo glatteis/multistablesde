@@ -45,11 +45,15 @@ class FitzHughNagumo(object):
         return torch.cat(f, dim=1)
 
     @torch.no_grad()
-    def sample(self, batch_size, ts, normalize, device, bm=None):
+    def sample(self, batch_size, ts, normalize, device, bm=None, project=True):
         x0 = (torch.randn(batch_size, 2) * 1.0).to(device)
         """Sample data for training. Store data normalization constants if necessary."""
         # Throw away second dimension
-        xs = torchsde.sdeint(self, x0, ts, bm=bm)[:, :, 1:2]
+        xs_ = torchsde.sdeint(self, x0, ts, bm=bm)
+        if project:
+            xs = xs_[:, :, 1:2]
+        else:
+            xs = xs_
         if normalize:
             mean, std = torch.mean(xs[0, :, :], dim=(0, 1)), torch.std(
                 xs[0, :, :], dim=(0, 1)

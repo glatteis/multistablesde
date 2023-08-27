@@ -187,7 +187,7 @@ class LatentSDE(nn.Module):
         return log_pxs, logqp0 + logqp_path, noise
 
     @torch.no_grad()
-    def sample(self, batch_size, ts, bm=None, dt=1e-3):
+    def sample(self, batch_size, ts, bm=None, dt=1e-3, project=True):
         eps = torch.randn(
             size=(batch_size, *self.pz0_mean.shape[1:]), device=self.pz0_mean.device
         )
@@ -195,7 +195,10 @@ class LatentSDE(nn.Module):
         zs = torchsde.sdeint(self, z0, ts, names={"drift": "h"}, dt=dt, bm=bm)
         # Most of the times in ML, we don't sample the observation noise for visualization purposes.
         # _xs = self.projector(zs)
-        _xs = zs[:, :, 0:1]
+        if project:
+            _xs = zs[:, :, 0:1]
+        else:
+            _xs = zs
         return _xs
 
     @torch.no_grad()
