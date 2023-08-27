@@ -550,8 +550,8 @@ def run_summary_analysis(model_folders, out):
         )
 
 def draw_phase_portrait(sde, out):
-    batch_size = 10
-    ts = torch.linspace(0, 8, steps=1000)
+    batch_size = 1
+    ts = torch.linspace(0, 8, steps=10000)
     if isinstance(sde, FitzHughNagumo):
         trajectories = sde.sample(batch_size, ts, False, "cpu", project=False).numpy()
         sde_func = sde.f
@@ -560,7 +560,7 @@ def draw_phase_portrait(sde, out):
         sde_func = sde.h
 
     for i in range(batch_size):
-        plt.plot(trajectories[:, i, 0:1], trajectories[:, i, 1:2], linewidth=0.4)
+        plt.plot(trajectories[:, i, 0:1], trajectories[:, i, 1:2], linewidth=0.3)
     
     y1 = np.linspace(*plt.xlim(), 20)
     y2 = np.linspace(*plt.ylim(), 20)
