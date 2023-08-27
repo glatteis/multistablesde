@@ -80,7 +80,7 @@ def std(xs):
 
 def bifurcation(xs):
     flattened_xs = xs.flatten()
-    search_space = np.linspace(-1.0, 1.0, num=100)
+    search_space = np.linspace(-0.5, 0.5, num=100)
     histogram, _ = np.histogram(flattened_xs, bins=search_space)
     min_point = np.argmin(histogram)
     #assert min_point != 0 and min_point != len(search_space) - 1
@@ -560,7 +560,7 @@ def draw_phase_portrait(sde, out):
         sde_func = sde.h
 
     for i in range(batch_size):
-        plt.plot(trajectories[:, i, 0:1], trajectories[:, i, 1:2], linewidth=0.3)
+        plt.plot(trajectories[:, i, 0:1], trajectories[:, i, 1:2], linewidth=0.3, color="orange")
     
     y1 = np.linspace(*plt.xlim(), 20)
     y2 = np.linspace(*plt.ylim(), 20)
