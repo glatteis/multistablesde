@@ -184,7 +184,7 @@ def tipping_rate(ts, xs):
     # print(tips_counted == tips_counted_alternative)
 
     dt = ts[1] - ts[0]
-    return tips_counted / (dt * (ts[-1] - ts[0]))
+    return tips_counted / (dt * (ts[-1] - ts[0]) * xs.size(dim=1))
 
 
 def draw_tipping(ts, xs_sde, xs_data, window_size, file, title):
