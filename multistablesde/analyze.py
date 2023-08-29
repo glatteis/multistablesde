@@ -592,7 +592,7 @@ def draw_phase_portrait(sde, out):
     plt.close()
 
 def main(
-    model=None, data=None, folder=None, pgf=False, only_summary=False, show_params=False
+    model=None, data=None, folder=None, pgf=False, only_summary=False, show_params=False, big=False
 ):
     global extension
     global plt
@@ -601,6 +601,8 @@ def main(
         extension = ".pgf"
     else:
         extension = ".pdf"
+    if big:
+        extension = "_big" + extension
     import matplotlib.pyplot as plt
 
     if pgf:
@@ -614,7 +616,7 @@ def main(
         )
     plt.rcParams.update(
         {
-            "figure.figsize": (2.8, 1.8),
+            "figure.figsize": (5, 1.8) if big else (2.8, 1.8),
             "font.size": 8,
             "axes.spines.right": False,
             "axes.spines.top": False,
