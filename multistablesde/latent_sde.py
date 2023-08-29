@@ -401,6 +401,7 @@ def main(
     scalar_diffusion=False,
     noise_penalty=0.0,
     noise_penalty_iters=1000,
+    experimental_loss=False,
 ):
     # Save the set configuration for analysis - these are just the locals at
     # the beginning of the execution
@@ -476,11 +477,14 @@ def main(
         log_pxs, log_ratio, noise = latent_sde(
             xs, ts, noise_std, adjoint, method, dt=dt
         )
-        loss = (
-            -log_pxs
-            + log_ratio * kl_scheduler.val
-            - noise * noise_penalty_scheduler.val
-        )
+        if experimental_loss:
+            loss = -log_pxs + noise * (log_ratio - noise_penalty_scheduler.val)
+        else:
+            loss = (
+                -log_pxs
+                + log_ratio * kl_scheduler.val
+                - noise * noise_penalty_scheduler.val
+            )
         loss.backward()
         optimizer.step()
         scheduler.step()
