@@ -68,7 +68,7 @@ class LatentSDE(nn.Module):
     noise_type = "diagonal"
 
     def __init__(
-        self, data_size, latent_size, context_size, hidden_size, scalar_diffusion=False
+        self, data_size, latent_size, context_size, hidden_size, scalar_diffusion=False, use_projector=False
     ):
         super(LatentSDE, self).__init__()
         # Encoder.
@@ -118,7 +118,10 @@ class LatentSDE(nn.Module):
                     for _ in range(latent_size)
                 ]
             )
-        # self.projector = nn.Linear(latent_size, data_size)
+        if use_projector:
+            self.projector = nn.Linear(latent_size, data_size, bias=False)
+        else:
+            self.projector = None
 
         self.pz0_mean = nn.Parameter(torch.zeros(1, latent_size))
         self.pz0_logstd = nn.Parameter(torch.zeros(1, latent_size))
@@ -172,8 +175,10 @@ class LatentSDE(nn.Module):
                 self, z0, ts, dt=dt, logqp_noise_penalty=True, method=method
             )
 
-        # _xs = self.projector(zs)
-        _xs = zs[:, :, 0:1]
+        if self.projector:
+            _xs = self.projector(zs)
+        else:
+            _xs = zs[:, :, 0:1]
         xs_dist = Normal(loc=_xs, scale=noise_std)
         log_pxs = dt * xs_dist.log_prob(xs).sum(dim=(0, 2)).mean(dim=0)
 
@@ -193,10 +198,11 @@ class LatentSDE(nn.Module):
         )
         z0 = self.pz0_mean + self.pz0_logstd.exp() * eps
         zs = torchsde.sdeint(self, z0, ts, names={"drift": "h"}, dt=dt, bm=bm)
-        # Most of the times in ML, we don't sample the observation noise for visualization purposes.
-        # _xs = self.projector(zs)
         if project:
-            _xs = zs[:, :, 0:1]
+            if self.projector:
+                _xs = self.projector(zs)
+            else:
+                _xs = zs[:, :, 0:1]
         else:
             _xs = zs
         return _xs
@@ -233,8 +239,10 @@ class LatentSDE(nn.Module):
                 self, z0, ts, dt=dt, logqp_noise_penalty=True, method=method
             )
 
-        # _xs = self.projector(zs)
-        _xs = zs[:, :, 0:1]
+        if self.projector:
+            _xs = self.projector(zs)
+        else:
+            _xs = zs[:, :, 0:1]
         return _xs, log_ratio, noise_penalty
 
 
@@ -402,6 +410,7 @@ def main(
     noise_penalty=0.0,
     noise_penalty_iters=1000,
     experimental_loss=False,
+    use_projector=False,
 ):
     # Save the set configuration for analysis - these are just the locals at
     # the beginning of the execution
@@ -442,6 +451,7 @@ def main(
         context_size=context_size,
         hidden_size=hidden_size,
         scalar_diffusion=scalar_diffusion,
+        use_projector=use_projector,
     ).to(device)
     optimizer = optim.Adam(params=latent_sde.parameters(), lr=lr_init)
     scheduler = torch.optim.lr_scheduler.ExponentialLR(
