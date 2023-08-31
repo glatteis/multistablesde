@@ -51,7 +51,7 @@ class FitzHughNagumo(object):
         # Throw away second dimension
         xs_ = torchsde.sdeint(self, x0, ts, bm=bm)
         if project:
-            xs = xs_[:, :, 1:2]
+            xs = xs_[:, :, 0:1]
         else:
             xs = xs_
         if normalize:
