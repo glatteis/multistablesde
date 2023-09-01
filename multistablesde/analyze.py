@@ -235,9 +235,16 @@ def run_individual_analysis(model, data, show_params=False):
         datapoint_extrapolated_repeated, ts_extrapolated
     )
 
-    if latent_sde.pz0_mean.shape[1:][0] == 2:
-        draw_phase_portrait(latent_sde, f"{out}/phase_portrait")
+    if latent_sde.pz0_mean.shape[1:][0] == 1:
+        draw_func(latent_sde.h, -2.0, 2.0, "$h(x)$", f"{out}/func_h")
+        # just for the custom model because we did experiments on it, it's just more convenient to plot that here even though it's not very general
+        ebm = StochasticEnergyBalance()
+        ebm.noise_var = 0.135
+        draw_func(ebm.f, 200.0, 350.0, "$f(x)$", f"{out}/ebm_f")
+    elif latent_sde.pz0_mean.shape[1:][0] == 2:
+        draw_phase_portrait(latent_sde, 200, 350, "$f(x)$", f"{out}/phase_portrait")
         draw_phase_portrait(FitzHughNagumo(), f"{out}/phase_portrait_fhn")
+    
 
     # assumptions: ts_train[0] == 0, ts_train is evenly spaced
     assert ts_train[0] == 0.0
@@ -590,6 +597,22 @@ def draw_phase_portrait(sde, out):
     plt.tight_layout(pad=0.3)
     plt.savefig(out + extension)
     plt.close()
+
+def draw_func(func, x0, x1, ylabel, out):
+    datapoints = 100
+    space = np.linspace(x0, x1, datapoints)
+    result = []
+    
+    for x in space:
+        result.append(float(func(0.0, torch.tensor([[x]], dtype=torch.float32))))
+
+    plt.plot(space, result)
+    plt.xlabel("$x$")
+    plt.ylabel(ylabel)
+    plt.tight_layout(pad=0.3)
+    plt.savefig(out + extension)
+    plt.close()
+
 
 def main(
     model=None, data=None, folder=None, pgf=False, only_summary=False, show_params=False, big=False
