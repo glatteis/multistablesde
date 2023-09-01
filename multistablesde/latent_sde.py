@@ -175,7 +175,7 @@ class LatentSDE(nn.Module):
                 self, z0, ts, dt=dt, logqp_noise_penalty=True, method=method
             )
 
-        if self.projector:
+        if hasattr(self, "projector") and self.projector:
             _xs = self.projector(zs)
         else:
             _xs = zs[:, :, 0:1]
@@ -199,7 +199,7 @@ class LatentSDE(nn.Module):
         z0 = self.pz0_mean + self.pz0_logstd.exp() * eps
         zs = torchsde.sdeint(self, z0, ts, names={"drift": "h"}, dt=dt, bm=bm)
         if project:
-            if self.projector:
+            if hasattr(self, "projector") and self.projector:
                 _xs = self.projector(zs)
             else:
                 _xs = zs[:, :, 0:1]
@@ -239,7 +239,7 @@ class LatentSDE(nn.Module):
                 self, z0, ts, dt=dt, logqp_noise_penalty=True, method=method
             )
 
-        if self.projector:
+        if hasattr(self, "projector") and self.projector:
             _xs = self.projector(zs)
         else:
             _xs = zs[:, :, 0:1]
