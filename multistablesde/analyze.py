@@ -601,8 +601,8 @@ def draw_phase_portrait(sde, out):
 def draw_func_ebm(func_sde, func_ebm, out):
     hardcoded_mean = 269.3631
     hardcoded_std = 20.4674
-    datapoints = 100
-    space = np.linspace(-4, 4, datapoints)
+    datapoints = 400
+    space = np.linspace(-3, 3, datapoints)
 
     result_sde = []
     for x in space:
