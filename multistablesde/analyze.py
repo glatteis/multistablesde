@@ -242,7 +242,7 @@ def run_individual_analysis(model, data, show_params=False):
         ebm.noise_var = 0.135
         draw_func(ebm.f, 200.0, 350.0, "$f(x)$", f"{out}/ebm_f")
     elif latent_sde.pz0_mean.shape[1:][0] == 2:
-        draw_phase_portrait(latent_sde, 200, 350, "$f(x)$", f"{out}/phase_portrait")
+        draw_phase_portrait(latent_sde, f"{out}/phase_portrait")
         draw_phase_portrait(FitzHughNagumo(), f"{out}/phase_portrait_fhn")
     
 
