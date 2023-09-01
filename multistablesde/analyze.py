@@ -235,12 +235,12 @@ def run_individual_analysis(model, data, show_params=False):
         datapoint_extrapolated_repeated, ts_extrapolated
     )
 
+    # just for the custom models because we did experiments on them, it's just
+    # more convenient to plot that here even though it's not very general
     if latent_sde.pz0_mean.shape[1:][0] == 1:
-        draw_func(latent_sde.h, -2.0, 2.0, "$h(x)$", f"{out}/func_h")
-        # just for the custom model because we did experiments on it, it's just more convenient to plot that here even though it's not very general
         ebm = StochasticEnergyBalance()
         ebm.noise_var = 0.135
-        draw_func(ebm.f, 200.0, 350.0, "$f(x)$", f"{out}/ebm_f")
+        draw_func_ebm(latent_sde.h, ebm.f, f"{out}/func")
     elif latent_sde.pz0_mean.shape[1:][0] == 2:
         draw_phase_portrait(latent_sde, f"{out}/phase_portrait")
         draw_phase_portrait(FitzHughNagumo(), f"{out}/phase_portrait_fhn")
@@ -598,17 +598,26 @@ def draw_phase_portrait(sde, out):
     plt.savefig(out + extension)
     plt.close()
 
-def draw_func(func, x0, x1, ylabel, out):
+def draw_func_ebm(func_sde, func_ebm, out):
+    hardcoded_mean = 269.3631
+    hardcoded_std = 20.4674
     datapoints = 100
-    space = np.linspace(x0, x1, datapoints)
-    result = []
-    
-    for x in space:
-        result.append(float(func(0.0, torch.tensor([[x]], dtype=torch.float32))))
+    space = np.linspace(-4, 4, datapoints)
 
-    plt.plot(space, result)
+    result_sde = []
+    for x in space:
+        result_sde.append(float(func_sde(0.0, torch.tensor([[x]], dtype=torch.float32))))
+    result_ebm = []
+    for x in space:
+        result_ebm.append(float(func_ebm(0.0, torch.tensor([[x * hardcoded_std + hardcoded_mean]], dtype=torch.float32))) / hardcoded_std)
+
+    plt.subplots()
+    plt.axhline(0, linestyle='--', color="black")
+    plt.plot(space, result_sde, label="Latent SDE")
+    plt.plot(space, result_ebm, label="Noisy EBM")
     plt.xlabel("$x$")
-    plt.ylabel(ylabel)
+    plt.ylabel("$dx$")
+    plt.legend()
     plt.tight_layout(pad=0.3)
     plt.savefig(out + extension)
     plt.close()
