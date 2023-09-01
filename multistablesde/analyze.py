@@ -613,8 +613,8 @@ def draw_func_ebm(func_sde, func_ebm, out):
 
     plt.subplots()
     plt.axhline(0, linestyle='--', color="black")
-    plt.plot(space, result_sde, label="Latent SDE")
-    plt.plot(space, result_ebm, label="Noisy EBM")
+    plt.plot(space, result_sde, label="Latent SDE", color="green")
+    plt.plot(space, result_ebm, label="Noisy EBM", color="orange")
     plt.xlabel("$x$")
     plt.ylabel("$dx$")
     plt.legend()
