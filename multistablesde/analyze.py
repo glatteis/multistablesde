@@ -361,6 +361,7 @@ def draw_param_to_info(
     info_title,
     out,
     xscale="linear",
+    yscale="linear",
     save=True,
 ):
     params = [x[param_name] for x in configs]
@@ -372,6 +373,7 @@ def draw_param_to_info(
     plt.plot(sorted_params, info_values, label=ts_title)
     plt.xlabel(param_title)
     plt.xscale(xscale)
+    plt.yscale(yscale)
     plt.ylabel(info_title)
     if save:
         # plt.title(f"{param_title} to {info_title}, {ts_title}")
@@ -510,6 +512,7 @@ def run_summary_analysis(model_folders, out):
                 "Wasserstein Distance",
                 out,
                 xscale=xscale,
+                yscale="log",
                 save=False,
             )
         plt.tight_layout(pad=0.3)
