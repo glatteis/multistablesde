@@ -240,7 +240,8 @@ def run_individual_analysis(model, data, show_params=False):
     if latent_sde.pz0_mean.shape[1:][0] == 1:
         ebm = StochasticEnergyBalance()
         ebm.noise_var = 0.135
-        draw_func_ebm(latent_sde.h, ebm.f, f"{out}/func")
+        draw_func_ebm(latent_sde.h, ebm.f, f"{out}/func_drift", hardcoded_mean=269.3631, hardcoded_std = 20.4674)
+        draw_func_ebm(latent_sde.g, ebm.g, f"{out}/func_diffusion", hardcoded_mean=0.0, hardcoded_std=20.4674)
     elif latent_sde.pz0_mean.shape[1:][0] == 2:
         draw_phase_portrait(latent_sde, f"{out}/phase_portrait")
         draw_phase_portrait(FitzHughNagumo(), f"{out}/phase_portrait_fhn")
@@ -598,9 +599,7 @@ def draw_phase_portrait(sde, out):
     plt.savefig(out + extension)
     plt.close()
 
-def draw_func_ebm(func_sde, func_ebm, out):
-    hardcoded_mean = 269.3631
-    hardcoded_std = 20.4674
+def draw_func_ebm(func_sde, func_ebm, out, hardcoded_mean=0.0, hardcoded_std=0.0):
     datapoints = 400
     space = np.linspace(-3, 3, datapoints)
 
