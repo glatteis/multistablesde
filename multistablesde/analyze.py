@@ -241,7 +241,7 @@ def run_individual_analysis(model, data, show_params=False):
         ebm = StochasticEnergyBalance()
         ebm.noise_var = 0.135
         draw_func_ebm(latent_sde.h, ebm.f, f"{out}/func_drift", hardcoded_mean=269.3631, hardcoded_std = 20.4674)
-        draw_func_ebm(latent_sde.g, ebm.g, f"{out}/func_diffusion", hardcoded_mean=0.0, hardcoded_std=20.4674)
+        draw_func_ebm(latent_sde.g, ebm.g, f"{out}/func_diffusion", hardcoded_mean=269.3631, hardcoded_std=20.4674)
     elif latent_sde.pz0_mean.shape[1:][0] == 2:
         draw_phase_portrait(latent_sde, f"{out}/phase_portrait")
         draw_phase_portrait(FitzHughNagumo(), f"{out}/phase_portrait_fhn")
