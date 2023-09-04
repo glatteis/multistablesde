@@ -2,7 +2,7 @@ import torch
 import torchsde
 
 
-class StochasticEnergyBalance(object):
+class ConstantStochasticEnergyBalance(object):
     noise_type = "diagonal"
     sde_type = "ito"
 
@@ -10,7 +10,7 @@ class StochasticEnergyBalance(object):
     albedo_var = 0.4
     solarconstant = 1363.0
     radiation = 0.6 * 5.67e-8
-    noise_var = 0.08
+    noise_var = 40
 
     state_space_size = 1
 
@@ -29,9 +29,7 @@ class StochasticEnergyBalance(object):
         return torch.cat([f], dim=1)
 
     def g(self, t, y):
-        x = torch.split(y, split_size_or_sections=(1), dim=1)
-        f = x[0] * self.noise_var
-        return torch.cat([f], dim=1)
+        return torch.full_like(y, self.noise_var)
 
     @torch.no_grad()
     def sample(self, batch_size, ts, normalize, device, bm=None):
