@@ -30,6 +30,7 @@ class StochasticEnergyBalance(object):
 
     def g(self, t, y):
         x = torch.split(y, split_size_or_sections=(1), dim=1)
+        # f = x[0] * self.noise_var
         f = x[0] * self.noise_var
         return torch.cat([f], dim=1)
 

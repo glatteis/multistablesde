@@ -32,7 +32,6 @@ interval_names = {
     "5_extrapolation": "$(t_{train}, 5 t_{train})$",
 }
 
-
 def draw_marginals(xs_sde, xs_data, file, title):
     bins = np.linspace(
         min(xs_sde.min(), xs_data.min()), max(xs_sde.max(), xs_data.max()), 100
