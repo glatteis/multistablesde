@@ -248,6 +248,7 @@ def run_individual_analysis(model, data, show_params=False):
     elif latent_sde.pz0_mean.shape[1:][0] == 2:
         draw_phase_portrait(latent_sde, f"{out}/phase_portrait")
         draw_phase_portrait(FitzHughNagumo(), f"{out}/phase_portrait_fhn")
+        draw_phase_portrait(FitzHughNagumoGamma(), f"{out}/phase_portrait_fhn_gamma")
     
 
     # assumptions: ts_train[0] == 0, ts_train is evenly spaced
@@ -566,7 +567,7 @@ def run_summary_analysis(model_folders, out):
 def draw_phase_portrait(sde, out):
     batch_size = 1
     ts = torch.linspace(0, 8, steps=10000)
-    if isinstance(sde, FitzHughNagumo):
+    if isinstance(sde, FitzHughNagumo) or isinstance(sde, FitzHughNagumoGamma):
         trajectories = sde.sample(batch_size, ts, False, "cpu", project=False).numpy()
         sde_func = sde.f
     else:

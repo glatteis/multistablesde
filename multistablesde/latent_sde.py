@@ -34,6 +34,7 @@ import torchsde
 from models.energy_balance import StochasticEnergyBalance
 from models.energy_balance_constant import ConstantStochasticEnergyBalance
 from models.fitzhugh_nagumo import FitzHughNagumo
+from models.fitzhugh_nagumo_gamma import FitzHughNagumoGamma
 from models.geometric_bm import GeometricBM
 from models.ornstein_uhlenbeck import OrnsteinUhlenbeck
 
@@ -423,6 +424,7 @@ def main(
         "energy": StochasticEnergyBalance(),
         "energyconstant": ConstantStochasticEnergyBalance(),
         "fitzhugh": FitzHughNagumo(),
+        "fitzhughgamma": FitzHughNagumoGamma(),
         "geometricbm": GeometricBM(),
         "ornstein": OrnsteinUhlenbeck(),
     }
