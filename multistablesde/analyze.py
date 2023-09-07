@@ -566,7 +566,7 @@ def run_summary_analysis(model_folders, out):
 
 def draw_phase_portrait(sde, out):
     batch_size = 1
-    ts = torch.linspace(0, 8, steps=10000)
+    ts = torch.linspace(0, 1, steps=10000)
     if isinstance(sde, FitzHughNagumo) or isinstance(sde, FitzHughNagumoGamma):
         trajectories = sde.sample(batch_size, ts, False, "cpu", project=False).numpy()
         sde_func = sde.f
@@ -575,7 +575,7 @@ def draw_phase_portrait(sde, out):
         sde_func = sde.h
 
     for i in range(batch_size):
-        plt.plot(trajectories[:, i, 0:1], trajectories[:, i, 1:2], linewidth=0.3, color="orange")
+        plt.plot(trajectories[:, i, 0:1], trajectories[:, i, 1:2], linewidth=0.4, color="orange", alpha=0.6)
     
     y1 = np.linspace(*plt.xlim(), 20)
     y2 = np.linspace(*plt.ylim(), 20)
@@ -588,9 +588,10 @@ def draw_phase_portrait(sde, out):
     
     # https://stackoverflow.com/questions/24490753/logarithmic-lenghts-in-plotting-arrows-with-quiver-function-from-pyplot
     def transform(u, v):
-        arrow_lengths = np.sqrt(u*u + v*v)
-        len_adjust_factor = np.log10(arrow_lengths + 1) / arrow_lengths
-        return u*len_adjust_factor, v*len_adjust_factor
+        return u, v
+        # arrow_lengths = np.sqrt(u*u + v*v)
+        # len_adjust_factor = np.log10(arrow_lengths + 1) / arrow_lengths
+        # return u*len_adjust_factor, v*len_adjust_factor
 
     for i in range(len(y1)):
         for j in range(len(y2)):
@@ -599,7 +600,9 @@ def draw_phase_portrait(sde, out):
             dx, dy = map(float, sde_func(t, torch.tensor([[x, y]], dtype=torch.float32))[0])
             out1[i, j], out2[i, j] = transform(dx, dy)
 
-    plt.quiver(g1, g2, out1, out2, (out1**2 + out2**2)**0.5)
+    # plt.quiver(g1, g2, out1, out2, (out1**2 + out2**2)**0.5)
+    plt.streamplot(g1, g2, out1, out2, color=(out1**2 + out2**2)**0.5, linewidth=0.5, cmap='viridis', density=2, arrowsize=0.5)
+
     plt.xlabel('$y_1$')
     plt.ylabel('$y_2$')
     plt.tight_layout(pad=0.3)
