@@ -249,6 +249,10 @@ def run_individual_analysis(model, data, show_params=False):
         draw_phase_portrait(latent_sde, f"{out}/phase_portrait")
         draw_phase_portrait(FitzHughNagumo(), f"{out}/phase_portrait_fhn")
         draw_phase_portrait(FitzHughNagumoGamma(), f"{out}/phase_portrait_fhn_gamma")
+
+        draw_phase_portrait(latent_sde, f"{out}/phase_portrait_diffusion", diffusion=True)
+        draw_phase_portrait(FitzHughNagumo(), f"{out}/phase_portrait_fhn_diffusion", diffusion=True)
+        draw_phase_portrait(FitzHughNagumoGamma(), f"{out}/phase_portrait_fhn_gamma_diffusion", diffusion=True)
     
 
     # assumptions: ts_train[0] == 0, ts_train is evenly spaced
@@ -564,15 +568,21 @@ def run_summary_analysis(model_folders, out):
             configs, training_infos, param_name, param_title, out, xscale=xscale
         )
 
-def draw_phase_portrait(sde, out):
+def draw_phase_portrait(sde, out, diffusion=False):
     batch_size = 1
-    ts = torch.linspace(0, 1, steps=10000)
+    ts = torch.linspace(0, 4, steps=10000)
     if isinstance(sde, FitzHughNagumo) or isinstance(sde, FitzHughNagumoGamma):
         trajectories = sde.sample(batch_size, ts, False, "cpu", project=False).numpy()
-        sde_func = sde.f
+        if diffusion:
+            sde_func = sde.g
+        else:
+            sde_func = sde.f
     else:
         trajectories = sde.sample(batch_size, ts, project=False).numpy()
-        sde_func = sde.h
+        if diffusion:
+            sde_func = sde.g
+        else:
+            sde_func = sde.h
 
     for i in range(batch_size):
         plt.plot(trajectories[:, i, 0:1], trajectories[:, i, 1:2], linewidth=0.4, color="orange", alpha=0.6)
