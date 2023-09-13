@@ -278,7 +278,7 @@ def make_dataset(
         entropy=48123,  # seed (generate the same data if models are the same)
     )
     torch.manual_seed(48123)
-    xs_extrapolated = model.sample(
+    xs_extrapolated, mean, std = model.sample(
         batch_size, ts_extrapolated.to(device), normalize=True, device=device, bm=bm
     )
     torch.seed()
@@ -291,6 +291,8 @@ def make_dataset(
             "ts_extrapolated": ts_extrapolated,
             "xs": xs_extrapolated,
             "dt": dt,
+            "mean": mean,
+            "std": std,
         },
         data_path,
     )
@@ -448,6 +450,8 @@ def main(
     # Save configuration
     with open(f"{train_dir}/config.json", "w", encoding="utf8") as f:
         json.dump(configuration, f, ensure_ascii=False, indent=4)
+
+    torch.save(model_obj, os.path.join(train_dir, "data_model_obj.pth"))
 
     latent_sde = LatentSDE(
         data_size=1,

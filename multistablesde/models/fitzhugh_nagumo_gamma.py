@@ -59,4 +59,6 @@ class FitzHughNagumoGamma(object):
                 xs[0, :, :], dim=(0, 1)
             )
             xs.sub_(mean).div_(std)
-        return xs
+            return xs, mean, std
+        else:
+            return xs

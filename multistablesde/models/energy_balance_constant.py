@@ -40,6 +40,7 @@ class ConstantStochasticEnergyBalance(object):
             mean, std = torch.mean(xs[0, :, :], dim=(0, 1)), torch.std(
                 xs[0, :, :], dim=(0, 1)
             )
-            print(mean, std)
             xs.sub_(mean).div_(std)
-        return xs
+            return xs, mean, std
+        else:
+            return xs
