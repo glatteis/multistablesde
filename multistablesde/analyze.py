@@ -78,8 +78,6 @@ def std(xs):
 
 
 def bifurcation(xs):
-    # TODO for fitzhugh analysis
-    return 0
     flattened_xs = xs.flatten()
     search_space = np.linspace(-0.5, 0.5, num=100)
     histogram, _ = np.histogram(flattened_xs, bins=search_space)

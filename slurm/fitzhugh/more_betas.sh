@@ -1,7 +1,14 @@
 #!/bin/sh
-fixed_args="multistablesde/latent_sde.py --latent-size=2 --lr_gamma=0.9995 --model=fitzhugh --kl-anneal-iters=1000 --num-iters=10000"
+fixed_args="multistablesde/latent_sde.py --latent-size=2 --lr_gamma=0.9995 --model=fitzhughgamma --kl-anneal-iters=1000 --num-iters=10000"
 
 variable_args=(
+	"--beta=0.01"
+	"--beta=0.1"
+	"--beta=1"
+	"--beta=10"
+	"--beta=100"
+	"--beta=1000"
+	"--beta=10000"
 	"--beta=17.7"
 	"--beta=31.6"
 	"--beta=56.2"

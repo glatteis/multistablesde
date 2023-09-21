@@ -3,10 +3,13 @@ fixed_args="multistablesde/latent_sde.py --latent-size=1 --lr_gamma=0.9995 --mod
 
 variable_args=(
     "--batch-size=4"
+    "--batch-size=8"
     "--batch-size=16"
+    "--batch-size=32"
     "--batch-size=64"
     "--batch-size=256"
     "--batch-size=1024"
+    "--batch-size=2048"
     "--batch-size=4096"
 )
 
