@@ -586,7 +586,7 @@ def draw_phase_portrait(sde, out, diffusion=False):
             sde_func = sde.h
 
     for i in range(batch_size):
-        plt.plot(trajectories[:, i, 0:1], trajectories[:, i, 1:2], linewidth=0.4, color="orange", alpha=0.6)
+        plt.plot(trajectories[:, i, 0:1], trajectories[:, i, 1:2], linewidth=0.6, color="orange", alpha=1)
     
     y1 = np.linspace(*plt.xlim(), 20)
     y2 = np.linspace(*plt.ylim(), 20)
@@ -612,7 +612,7 @@ def draw_phase_portrait(sde, out, diffusion=False):
             out1[i, j], out2[i, j] = transform(dx, dy)
 
     # plt.quiver(g1, g2, out1, out2, (out1**2 + out2**2)**0.5)
-    plt.streamplot(g1, g2, out1, out2, color=(out1**2 + out2**2)**0.5, linewidth=0.5, cmap='viridis', density=2, arrowsize=0.5)
+    plt.streamplot(g1, g2, out1, out2, color=(out1**2 + out2**2)**0.5, linewidth=0.4, cmap='viridis', density=1.2, arrowsize=0.4)
 
     plt.xlabel('$y_1$')
     plt.ylabel('$y_2$')
