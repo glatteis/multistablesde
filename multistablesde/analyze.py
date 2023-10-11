@@ -206,7 +206,7 @@ def draw_tipping(ts, xs_sde, xs_data, window_size, file, title):
     plt.close()
 
 
-def run_individual_analysis(model, data, show_params=False):
+def run_individual_analysis(model, data, training_info_file, show_params=False):
     out = model.replace(".pth", "")
     os.makedirs(out, exist_ok=True)
     print(f"Writing individual analysis to folder {out}")
@@ -230,7 +230,6 @@ def run_individual_analysis(model, data, show_params=False):
 
     datapoint_extrapolated = xs_data_extrapolated[:, 1:2, :]
     datapoint_extrapolated_repeated = datapoint_extrapolated.repeat(1, batch_size, 1)
-    print(ts_extrapolated)
     posterior_extrapolated, _, _ = latent_sde.posterior_plot(
         datapoint_extrapolated_repeated, ts_extrapolated, dt=dt
     )
@@ -318,6 +317,10 @@ def run_individual_analysis(model, data, show_params=False):
     plt.tight_layout(pad=0.3)
     plt.savefig(f"{out}/wasserstein" + extension)
     plt.close()
+
+    training_infos = json.loads(Path(training_info_file).read_text())
+    for training_info in training_infos:
+        draw_training_info(training_infos[training_info], training_info.capitalize(), out)
 
     with open(f"{out}/info.json", "w", encoding="utf8") as f:
         json.dump(info, f, ensure_ascii=False, indent=4)
@@ -428,6 +431,17 @@ def scatter_param_to_training_info(
         )
         plt.close()
 
+
+def draw_training_info(training_info_xs, title, out, yscale="log"):
+    plt.plot(training_info_xs)
+    plt.xlabel("Iteration")
+    plt.ylabel(title)
+    plt.yscale(yscale)
+    plt.tight_layout(pad=0.3)
+    plt.savefig(
+        f"{out}/training_info_{title}" + extension
+    )
+    plt.close()
 
 def run_summary_analysis(model_folders, out):
     print(f"Writing summary analysis to folder {out}")
@@ -692,11 +706,13 @@ def main(
         model_folders = [os.path.dirname(x) for x in model_files]
         data_files = [os.path.join(x, "data.pth") for x in model_folders]
         assert all([os.path.exists(x) for x in data_files])
-        models_and_data = list(zip(model_files, data_files))
+        training_info_files = [os.path.join(x, "training_info.json") for x in model_folders]
+        assert all([os.path.exists(x) for x in training_info_files])
+        models_and_data = list(zip(model_files, data_files, training_info_files))
 
     if not only_summary:
-        for model, data in models_and_data:
-            run_individual_analysis(model, data, show_params=show_params)
+        for model, data, training_info_file in models_and_data:
+            run_individual_analysis(model, data, training_info_file, show_params=show_params)
 
     # if we ran a batch analyze, run the meta-analysis as well
     if folder is not None:
