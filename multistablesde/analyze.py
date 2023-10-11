@@ -92,7 +92,7 @@ def draw_xs(ts, xs, file, title, save=True):
     plt.xlabel("Time $t$")
     plt.ylabel("Value $u(t)$")
 
-    plt.ylim(-4, 4)
+    # plt.ylim(-4, 4)
 
     # plt.title(title)
     if save:
@@ -230,8 +230,9 @@ def run_individual_analysis(model, data, show_params=False):
 
     datapoint_extrapolated = xs_data_extrapolated[:, 1:2, :]
     datapoint_extrapolated_repeated = datapoint_extrapolated.repeat(1, batch_size, 1)
+    print(ts_extrapolated)
     posterior_extrapolated, _, _ = latent_sde.posterior_plot(
-        datapoint_extrapolated_repeated, ts_extrapolated
+        datapoint_extrapolated_repeated, ts_extrapolated, dt=dt
     )
 
     # just for the custom models because we did experiments on them, it's just
@@ -285,8 +286,8 @@ def run_individual_analysis(model, data, show_params=False):
             xs_sde, xs_data
         )
 
-        draw_xs(ts, xs_sde[:, 0:5, 0], f"{out}/prior_{name}", f"Prior, {title}")
-        draw_xs(ts, xs_data[:, 0:5, 0], f"{out}/data_{name}", f"Data, {title}")
+        draw_xs(ts, xs_sde[:, 0:20, 0], f"{out}/prior_{name}", f"Prior, {title}")
+        draw_xs(ts, xs_data[:, 0:20, 0], f"{out}/data_{name}", f"Data, {title}")
 
         draw_mean_var(ts, xs_sde, xs_data, f"{out}/mean_var_{name}", title)
 

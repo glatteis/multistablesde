@@ -1,5 +1,5 @@
 #!/bin/sh
-fixed_args="multistablesde/latent_sde.py --model ornstein --dt=0.05 --t1=10.0 --decay=0.999 --kl-anneal-iters=1000 --latent-size=2"
+fixed_args="multistablesde/latent_sde.py --model ornstein --dt=0.25 --t1=50.0 --decay=0.995 --kl-anneal-iters=1000 --latent-size=2 --num-iters 10000"
 
 variable_args=(
 	"--beta=0.01"
