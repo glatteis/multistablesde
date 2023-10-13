@@ -247,13 +247,16 @@ def run_individual_analysis(model, data, training_info_file, show_params=False):
         draw_func_ebm(latent_sde.h, corrected_f, f"{out}/func_drift", hardcoded_mean=mean, hardcoded_std=std)
         draw_func_ebm(latent_sde.g, ebm.g, f"{out}/func_diffusion", hardcoded_mean=mean, hardcoded_std=std)
     elif latent_sde.pz0_mean.shape[1:][0] == 2:
-        draw_phase_portrait(latent_sde, f"{out}/phase_portrait")
-        draw_phase_portrait(FitzHughNagumo(), f"{out}/phase_portrait_fhn")
-        draw_phase_portrait(FitzHughNagumoGamma(), f"{out}/phase_portrait_fhn_gamma")
+        t1 = float(ts_train[-1])
+        draw_phase_portrait(latent_sde, t1, f"{out}/phase_portrait")
+        draw_phase_portrait(FitzHughNagumo(), t1, f"{out}/phase_portrait_fhn")
+        draw_phase_portrait(FitzHughNagumoGamma(), t1, f"{out}/phase_portrait_fhn_gamma")
+        draw_phase_portrait(FitzHughNagumoKeno(), t1, f"{out}/phase_portrait_fhn_keno")
 
-        draw_phase_portrait(latent_sde, f"{out}/phase_portrait_diffusion", diffusion=True)
-        draw_phase_portrait(FitzHughNagumo(), f"{out}/phase_portrait_fhn_diffusion", diffusion=True)
-        draw_phase_portrait(FitzHughNagumoGamma(), f"{out}/phase_portrait_fhn_gamma_diffusion", diffusion=True)
+        draw_phase_portrait(latent_sde, t1, f"{out}/phase_portrait_diffusion", diffusion=True)
+        draw_phase_portrait(FitzHughNagumo(), t1, f"{out}/phase_portrait_fhn_diffusion", diffusion=True)
+        draw_phase_portrait(FitzHughNagumoGamma(), t1, f"{out}/phase_portrait_fhn_gamma_diffusion", diffusion=True)
+        draw_phase_portrait(FitzHughNagumoKeno(), t1, f"{out}/phase_portrait_fhn_keno_diffusion", diffusion=True)
     
 
     # assumptions: ts_train[0] == 0, ts_train is evenly spaced
@@ -584,28 +587,31 @@ def run_summary_analysis(model_folders, out):
             configs, training_infos, param_name, param_title, out, xscale=xscale
         )
 
-def draw_phase_portrait(sde, out, diffusion=False):
+def draw_phase_portrait(sde, t1, out, diffusion=False):
+    t1 = t1 * 5
     batch_size = 1
-    ts = torch.linspace(0, 4, steps=10000)
-    if isinstance(sde, FitzHughNagumo) or isinstance(sde, FitzHughNagumoGamma):
+    num_steps = 10000
+    ts = torch.linspace(0, t1, steps=num_steps)
+    if isinstance(sde, FitzHughNagumo) or isinstance(sde, FitzHughNagumoGamma) or isinstance(sde, FitzHughNagumoKeno):
         trajectories = sde.sample(batch_size, ts, False, "cpu", project=False).numpy()
         if diffusion:
             sde_func = sde.g
         else:
             sde_func = sde.f
     else:
-        trajectories = sde.sample(batch_size, ts, project=False).numpy()
+        trajectories = sde.sample(batch_size, ts, dt=t1/num_steps, project=False).numpy()
         if diffusion:
             sde_func = sde.g
         else:
             sde_func = sde.h
 
     for i in range(batch_size):
-        plt.plot(trajectories[:, i, 0:1], trajectories[:, i, 1:2], linewidth=0.6, color="orange", alpha=1)
-    
-    y1 = np.linspace(*plt.xlim(), 20)
-    y2 = np.linspace(*plt.ylim(), 20)
-    
+        start = int(num_steps*(4/5))
+        plt.plot(trajectories[start:-1, i, 0:1], trajectories[start:-1, i, 1:2], linewidth=0.7, color="orange", alpha=1)
+
+    y1 = np.linspace(*map(lambda x: x * 1.5, plt.xlim()), 20)
+    y2 = np.linspace(*map(lambda x: x * 1.5, plt.ylim()), 20)
+
     # adapted from https://kitchingroup.cheme.cmu.edu/blog/2013/02/21/Phase-portraits-of-a-system-of-ODEs/
     g1, g2 = np.meshgrid(y1, y2)
     out1 = np.zeros(g1.shape)
@@ -629,8 +635,8 @@ def draw_phase_portrait(sde, out, diffusion=False):
     # plt.quiver(g1, g2, out1, out2, (out1**2 + out2**2)**0.5)
     plt.streamplot(g1, g2, out1, out2, color=(out1**2 + out2**2)**0.5, linewidth=0.4, cmap='viridis', density=1.2, arrowsize=0.4)
 
-    plt.xlabel('$y_1$')
-    plt.ylabel('$y_2$')
+    plt.xlabel('$x$')
+    plt.ylabel('$y$')
     plt.tight_layout(pad=0.3)
     plt.savefig(out + extension)
     plt.close()
@@ -722,5 +728,6 @@ def main(
 
 
 if __name__ == "__main__":
+    sys.setrecursionlimit(10000)
     print(" ".join(sys.argv))
     fire.Fire(main)

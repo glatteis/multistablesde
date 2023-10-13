@@ -35,6 +35,7 @@ from models.energy_balance import StochasticEnergyBalance
 from models.energy_balance_constant import ConstantStochasticEnergyBalance
 from models.fitzhugh_nagumo import FitzHughNagumo
 from models.fitzhugh_nagumo_gamma import FitzHughNagumoGamma
+from models.fitzhugh_nagumo_keno import FitzHughNagumoKeno
 from models.geometric_bm import GeometricBM
 from models.ornstein_uhlenbeck import OrnsteinUhlenbeck
 
@@ -194,7 +195,7 @@ class LatentSDE(nn.Module):
         return log_pxs, logqp0 + logqp_path, noise
 
     @torch.no_grad()
-    def sample(self, batch_size, ts, bm=None, dt=1e-3, project=True):
+    def sample(self, batch_size, ts, bm=None, dt=None, project=True):
         eps = torch.randn(
             size=(batch_size, *self.pz0_mean.shape[1:]), device=self.pz0_mean.device
         )
@@ -210,7 +211,7 @@ class LatentSDE(nn.Module):
         return _xs
 
     @torch.no_grad()
-    def posterior_plot(self, xs, ts, dt=1e-2, adjoint=False, method="euler_heun"):
+    def posterior_plot(self, xs, ts, dt=None, adjoint=False, method="euler_heun"):
         # Contextualization is only needed for posterior inference.
         ctx = self.encoder(torch.flip(xs, dims=(0,)))
         ctx = torch.flip(ctx, dims=(0,))
@@ -313,7 +314,7 @@ def make_dataset(
     return xs_train.to(device), ts.to(device).to(device)
 
 
-def vis(xs, ts, latent_sde, bm_vis, img_path, num_samples=100, dt=1e-2):
+def vis(xs, ts, latent_sde, bm_vis, img_path, num_samples=100, dt=None):
     fig = plt.figure(figsize=(16, 9))
     gs = gridspec.GridSpec(3, 2)
     ax00 = fig.add_subplot(gs[0, 0])
@@ -427,6 +428,7 @@ def main(
         "energyconstant": ConstantStochasticEnergyBalance(),
         "fitzhugh": FitzHughNagumo(),
         "fitzhughgamma": FitzHughNagumoGamma(),
+        "fitzhughkeno": FitzHughNagumoKeno(),
         "geometricbm": GeometricBM(),
         "ornstein": OrnsteinUhlenbeck(),
     }
