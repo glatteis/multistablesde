@@ -268,7 +268,7 @@ def run_individual_analysis(model, data, training_info_file, config_file, show_p
 
     # just for the custom models because we did experiments on them, it's just
     # more convenient to plot that here even though it's not very general
-    if latent_sde.pz0_mean.shape[1:][0] == 1:
+    if latent_sde.pz0_mean.shape[1:][0] == 1 and "mean" in tsxs_data:
         ebm = StochasticEnergyBalance()
         ebm.noise_var = 0.135
         def corrected_f(t, x):
