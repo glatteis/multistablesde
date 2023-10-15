@@ -147,7 +147,7 @@ class LatentSDE(nn.Module):
         out = [g_net_i(y_i) for (g_net_i, y_i) in zip(self.g_nets, y)]
         return torch.cat(out, dim=1)
 
-    def forward(self, xs, ts, noise_std, adjoint=False, method="euler_heun", dt=1e-2):
+    def forward(self, xs, ts, noise_std, adjoint=False, method="euler_heun", dt=None):
         # Contextualization is only needed for posterior inference.
         ctx = self.encoder(torch.flip(xs, dims=(0,)))
         ctx = torch.flip(ctx, dims=(0,))

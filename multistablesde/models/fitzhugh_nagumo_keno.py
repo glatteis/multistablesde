@@ -12,7 +12,7 @@ class FitzHughNagumoKeno(object):
     t_y = 0.01
     y = 0.0
     sigmax = 0.0
-    sigmay = 0.5
+    sigmay = 5.0
 
     state_space_size = 2
 

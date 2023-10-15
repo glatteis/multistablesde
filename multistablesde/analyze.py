@@ -17,6 +17,7 @@ import json
 import glob
 from pathlib import Path
 import math
+from copy import deepcopy
 
 import torchsde
 
@@ -82,7 +83,8 @@ def bifurcation(xs):
     search_space = np.linspace(-0.5, 0.5, num=100)
     histogram, _ = np.histogram(flattened_xs, bins=search_space)
     min_point = np.argmin(histogram)
-    #assert min_point != 0 and min_point != len(search_space) - 1
+    if min_point == 0 or min_point == len(search_space) - 1:
+        print(f"Warning: min_point={min_point}")
 
     return search_space[min_point]
 
@@ -206,10 +208,40 @@ def draw_tipping(ts, xs_sde, xs_data, window_size, file, title):
     plt.close()
 
 
-def run_individual_analysis(model, data, training_info_file, show_params=False):
+def explore_diffusion_balance(latent_sde_old, xs, ts, dt, beta, out):
+    latent_sde = deepcopy(latent_sde_old)
+
+    diffusion_sizes = list(map(lambda x: x/2, list(range(50))))
+    log_pxss = []
+    log_ratios = []
+
+    for diffusion_size in diffusion_sizes:
+        def g(t, y):
+            result =  torch.full_like(y, diffusion_size)
+            return result
+        latent_sde.g = g
+        log_pxs, log_ratio, noise = latent_sde(
+            xs, ts, 0.01, adjoint=False, method="euler_heun", dt=dt
+        )
+        log_pxss.append(float(log_pxs))
+        log_ratios.append(beta * float(log_ratio))
+
+    plt.plot(diffusion_sizes, log_pxss, color="green", label="Log-Probability")
+    plt.plot(diffusion_sizes, log_ratios, color="orange", label="$\\beta \\cdot$ KL Divergence")
+    plt.legend()
+    plt.xlabel("Constant value of diffusion")
+    plt.ylabel("Loss Score")
+    plt.tight_layout(pad=0.3)
+    plt.savefig(out + extension)
+    plt.close()
+
+
+def run_individual_analysis(model, data, training_info_file, config_file, show_params=False):
     out = model.replace(".pth", "")
     os.makedirs(out, exist_ok=True)
     print(f"Writing individual analysis to folder {out}")
+
+    config = json.loads(Path(config_file).read_text())
 
     latent_sde = torch.load(model, map_location=torch.device("cpu"))
     if show_params:
@@ -298,6 +330,8 @@ def run_individual_analysis(model, data, training_info_file, show_params=False):
         )
 
         draw_tipping(ts, xs_sde, xs_data, 5, f"{out}/tipping_{name}", title)
+
+        explore_diffusion_balance(latent_sde, xs_data, ts, dt, config["beta"], f"{out}/diffusion_balance_{name}")
 
         info_local["tipping_rate_data"] = float(tipping_rate(ts, xs_data).sum())
         info_local["tipping_rate_sde"] = float(tipping_rate(ts, xs_sde).sum())
@@ -664,6 +698,7 @@ def draw_func_ebm(func_sde, func_ebm, out, hardcoded_mean=0.0, hardcoded_std=0.0
     plt.close()
 
 
+
 def main(
     model=None, data=None, folder=None, pgf=False, only_summary=False, show_params=False, big=False
 ):
@@ -703,22 +738,22 @@ def main(
 
     models_and_data = []
     model_folders = None
+    
+    assert folder is not None
 
-    if folder is None:
-        # just run the analysis script on this one file
-        models_and_data = [(model, data)]
-    else:
-        model_files = glob.glob(f"{folder}/**/model.pth", recursive=True)
-        model_folders = [os.path.dirname(x) for x in model_files]
-        data_files = [os.path.join(x, "data.pth") for x in model_folders]
-        assert all([os.path.exists(x) for x in data_files])
-        training_info_files = [os.path.join(x, "training_info.json") for x in model_folders]
-        assert all([os.path.exists(x) for x in training_info_files])
-        models_and_data = list(zip(model_files, data_files, training_info_files))
+    model_files = glob.glob(f"{folder}/**/model.pth", recursive=True)
+    model_folders = [os.path.dirname(x) for x in model_files]
+    data_files = [os.path.join(x, "data.pth") for x in model_folders]
+    assert all([os.path.exists(x) for x in data_files])
+    training_info_files = [os.path.join(x, "training_info.json") for x in model_folders]
+    assert all([os.path.exists(x) for x in training_info_files])
+    config_files = [os.path.join(x, "config.json") for x in model_folders]
+    assert all([os.path.exists(x) for x in config_files])
+    models_and_data = list(zip(model_files, data_files, training_info_files, config_files))
 
     if not only_summary:
-        for model, data, training_info_file in models_and_data:
-            run_individual_analysis(model, data, training_info_file, show_params=show_params)
+        for model, data, training_info_file, config_file in models_and_data:
+            run_individual_analysis(model, data, training_info_file, config_file, show_params=show_params)
 
     # if we ran a batch analyze, run the meta-analysis as well
     if folder is not None:
