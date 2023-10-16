@@ -8,8 +8,8 @@ class FitzHughNagumoKeno(object):
     sde_type = "ito"
 
     alpha = 2.0
-    t_x = 0.1
-    t_y = 0.01
+    t_x = 1 
+    t_y = 0.1 
     y = 0.0
     sigmax = 0.0
     sigmay = 5.0
