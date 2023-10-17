@@ -643,8 +643,10 @@ def draw_phase_portrait(sde, t1, out, diffusion=False):
         start = int(num_steps*(4/5))
         plt.plot(trajectories[start:-1, i, 0:1], trajectories[start:-1, i, 1:2], linewidth=0.7, color="orange", alpha=1)
 
-    y1 = np.linspace(*map(lambda x: x * 1.5, plt.xlim()), 20)
-    y2 = np.linspace(*map(lambda x: x * 1.5, plt.ylim()), 20)
+    xsize = plt.xlim()[1] - plt.xlim()[0]
+    ysize = plt.ylim()[1] - plt.ylim()[0]
+    y1 = np.linspace(plt.xlim()[0] - 0.5 * xsize, plt.xlim()[1] + 0.5 * xsize, 20)
+    y2 = np.linspace(plt.ylim()[0] - 0.5 * ysize, plt.ylim()[1] + 0.5 * ysize, 20)
 
     # adapted from https://kitchingroup.cheme.cmu.edu/blog/2013/02/21/Phase-portraits-of-a-system-of-ODEs/
     g1, g2 = np.meshgrid(y1, y2)
