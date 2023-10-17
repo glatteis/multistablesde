@@ -8,11 +8,11 @@ class FitzHughNagumoKeno(object):
     sde_type = "ito"
 
     alpha = 2.0
-    t_x = 1 
-    t_y = 0.1 
+    t_x = 1
+    t_y = 0.1
     y = 0.0
-    sigmax = 0.0
-    sigmay = 5.0
+    sigmax = 0.1
+    sigmay = 0.1
 
     state_space_size = 2
 
