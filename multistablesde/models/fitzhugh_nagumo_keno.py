@@ -21,17 +21,17 @@ class FitzHughNagumoKeno(object):
     # drifty(u, fhn::FitzHughNagumoModel, t) = tan(fhn.β) * u[2] - u[1] + fhn.c
     # diffusion(u, fhn::FitzHughNagumoModel, t) = [fhn.σx, fhn.σy]
 
-    def drifty(self, u, t):
-        return (1 / self.t_x) * (u[1] - self.y)
-
     def driftx(self, u, t):
-        return  (1 / self.t_y) * (self.alpha * (u[1] - u[1]**3) - u[0])
+        return  (1 / self.t_y) * (self.alpha * (u[0] - u[0]**3) - u[1])
 
-    def diffusiony(self, u, t):
-        return torch.full_like(u, self.sigmax)
+    def drifty(self, u, t):
+        return (1 / self.t_x) * (u[0] - self.y)
 
     def diffusionx(self, u, t):
         return torch.full_like(u, self.sigmay)
+
+    def diffusiony(self, u, t):
+        return torch.full_like(u, self.sigmax)
 
     def f(self, t, y):
         x = torch.split(y, split_size_or_sections=(1), dim=1)
