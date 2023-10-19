@@ -211,7 +211,7 @@ def draw_tipping(ts, xs_sde, xs_data, window_size, file, title):
 def explore_diffusion_balance(latent_sde_old, xs, ts, dt, beta, out):
     latent_sde = deepcopy(latent_sde_old)
 
-    diffusion_sizes = list(map(lambda x: x/2, list(range(50))))
+    diffusion_sizes = list(map(lambda x: x / 50, list(range(100))))
     log_pxss = []
     log_ratios = []
 
@@ -223,12 +223,13 @@ def explore_diffusion_balance(latent_sde_old, xs, ts, dt, beta, out):
         log_pxs, log_ratio, noise = latent_sde(
             xs, ts, 0.01, adjoint=False, method="euler_heun", dt=dt
         )
-        log_pxss.append(float(log_pxs))
+        log_pxss.append(-float(log_pxs))
         log_ratios.append(beta * float(log_ratio))
 
-    plt.plot(diffusion_sizes, log_pxss, color="green", label="Log-Probability")
+    plt.plot(diffusion_sizes, log_pxss, color="green", label="negative Log-Probability")
     plt.plot(diffusion_sizes, log_ratios, color="orange", label="$\\beta \\cdot$ KL Divergence")
     plt.legend()
+    plt.yscale("log")
     plt.xlabel("Constant value of diffusion")
     plt.ylabel("Loss Score")
     plt.tight_layout(pad=0.3)
