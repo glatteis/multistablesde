@@ -332,7 +332,7 @@ def run_individual_analysis(model, data, training_info_file, config_file, show_p
 
         draw_tipping(ts, xs_sde, xs_data, 5, f"{out}/tipping_{name}", title)
 
-        explore_diffusion_balance(latent_sde, xs_data, ts, dt, config["beta"], f"{out}/diffusion_balance_{name}")
+        # explore_diffusion_balance(latent_sde, xs_data, ts, dt, config["beta"], f"{out}/diffusion_balance_{name}")
 
         info_local["tipping_rate_data"] = float(tipping_rate(ts, xs_data).sum())
         info_local["tipping_rate_sde"] = float(tipping_rate(ts, xs_sde).sum())
