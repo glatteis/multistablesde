@@ -650,8 +650,9 @@ def draw_phase_portrait(sde, t1, out, diffusion=False):
 
     xsize = plt.xlim()[1] - plt.xlim()[0]
     ysize = plt.ylim()[1] - plt.ylim()[0]
-    y1 = np.linspace(plt.xlim()[0] - 0.5 * xsize, plt.xlim()[1] + 0.5 * xsize, 20)
-    y2 = np.linspace(plt.ylim()[0] - 0.5 * ysize, plt.ylim()[1] + 0.5 * ysize, 20)
+    scaleconst = 0.25
+    y1 = np.linspace(plt.xlim()[0] - scaleconst * xsize, plt.xlim()[1] + scaleconst * xsize, 20)
+    y2 = np.linspace(plt.ylim()[0] - scaleconst * ysize, plt.ylim()[1] + scaleconst * ysize, 20)
 
     # adapted from https://kitchingroup.cheme.cmu.edu/blog/2013/02/21/Phase-portraits-of-a-system-of-ODEs/
     g1, g2 = np.meshgrid(y1, y2)
