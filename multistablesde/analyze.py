@@ -65,8 +65,12 @@ def draw_marginals(xs_sde, xs_data, file, title):
 
 
 def distance_between_histograms(xs_sde, xs_data):
-    values_sde = torch.flatten(xs_sde).numpy()
-    values_data = torch.flatten(xs_data).numpy()
+    max_val = 1000.0
+    min_val = -1000.0
+    constrain = lambda tens: torch.minimum(torch.maximum(tens, torch.full_like(tens, min_val)), torch.full_like(tens, max_val))
+    values_sde = constrain(torch.flatten(xs_sde)).numpy()
+    values_data = constrain(torch.flatten(xs_data)).numpy()
+
     return scipy.stats.wasserstein_distance(values_sde, values_data)
 
 
