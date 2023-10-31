@@ -627,7 +627,7 @@ def run_summary_analysis(model_folders, out):
         )
 
 def draw_phase_portrait(sde, t1, out, diffusion=False):
-    t1 = t1 * 5
+    # t1 = t1 * 5
     batch_size = 1
     num_steps = 10000
     ts = torch.linspace(0, t1, steps=num_steps)
