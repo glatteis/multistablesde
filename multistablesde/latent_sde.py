@@ -147,7 +147,7 @@ class LatentSDE(nn.Module):
         out = [g_net_i(y_i) for (g_net_i, y_i) in zip(self.g_nets, y)]
         return torch.cat(out, dim=1)
 
-    def forward(self, xs, ts, noise_std, adjoint=False, method="euler_heun", dt=None):
+    def forward(self, xs, ts, adjoint=False, method="euler_heun", dt=None):
         # Contextualization is only needed for posterior inference.
         ctx = self.encoder(torch.flip(xs, dims=(0,)))
         ctx = torch.flip(ctx, dims=(0,))
@@ -182,7 +182,9 @@ class LatentSDE(nn.Module):
             _xs = self.projector(zs)
         else:
             _xs = zs[:, :, 0:1]
-        xs_dist = Normal(loc=_xs, scale=noise_std)
+        print(self.g(ts, _xs) * ts[1])
+        print(ts[1])
+        xs_dist = Normal(loc=_xs, scale=self.g(ts, _xs) * ts[1])
         log_pxs = dt * xs_dist.log_prob(xs).sum(dim=(0, 2)).mean(dim=0)
 
         qz0 = torch.distributions.Normal(loc=qz0_mean, scale=qz0_logstd.exp())
@@ -254,7 +256,7 @@ def steps(t0, t1, dt):
 
 
 def make_dataset(
-    model, t0, t1, t1_extrapolated, dt, batch_size, noise_std, train_dir, device
+    model, t0, t1, t1_extrapolated, dt, batch_size, train_dir, device
 ):
     data_path = os.path.join(train_dir, "data.pth")
     data_path_csv = os.path.join(train_dir, "data.csv")
@@ -402,7 +404,6 @@ def main(
     num_iters=5000,
     kl_anneal_iters=1000,
     pause_every=500,
-    noise_std=0.01,
     adjoint=False,
     train_dir="./dump/" + str(time.time_ns()),
     method="euler_heun",
@@ -444,7 +445,6 @@ def main(
         t1_extrapolated=t1 * 5.0,
         dt=dt,
         batch_size=batch_size,
-        noise_std=noise_std,
         train_dir=train_dir,
         device=device,
     )
@@ -495,7 +495,7 @@ def main(
     for global_step in tqdm.tqdm(range(1, num_iters + 1)):
         latent_sde.zero_grad()
         log_pxs, log_ratio, noise = latent_sde(
-            xs, ts, noise_std, adjoint, method, dt=dt
+            xs, ts, adjoint, method, dt=dt
         )
         if experimental_loss:
             loss = -log_pxs + noise * (log_ratio - noise_penalty_scheduler.val)
