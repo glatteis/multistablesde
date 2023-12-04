@@ -394,7 +394,7 @@ def main(
     batch_size=1024,
     latent_size=4,
     context_size=32,
-    hidden_size=64,
+    hidden_size=100,
     lr_init=1e-2,
     t0=0.0,
     t1=4.0,

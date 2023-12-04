@@ -6,9 +6,9 @@ class OrnsteinUhlenbeck(object):
     noise_type = "diagonal"
     sde_type = "ito"
 
-    mu = 0.02
-    sigma = 0.1
-    psi = 0.3
+    mu = 0.0
+    sigma = 1
+    psi = 1
 
     state_space_size = 1
 
