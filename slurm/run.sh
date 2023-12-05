@@ -2,7 +2,6 @@
 
 #SBATCH --job-name=pygpu
 #SBATCH --partition=c18g
-#SBATCH --account=thes1544
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=1
 #SBATCH --time=08:00:00
