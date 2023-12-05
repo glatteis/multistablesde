@@ -13,6 +13,7 @@ black = "*"
 tikzplotlib = "*"
 torchsde = {editable = true, ref = "master", git = "https://github.com/glatteis/torchsde"}
 pandas = "*"
+kramersmoyal = "*"
 
 [dev-packages]
 
