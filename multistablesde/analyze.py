@@ -19,6 +19,8 @@ from pathlib import Path
 import math
 from copy import deepcopy
 
+from kramersmoyal import km
+
 import torchsde
 
 # Wildcard import so that imported files find all classes
@@ -43,7 +45,7 @@ def draw_marginals(xs_sde, xs_data, file, title):
         alpha=0.25,
         label="Latent SDE",
         edgecolor="black",
-        color="green",
+        color="darkblue",
         linewidth=1.2,
     )
     plt.hist(
@@ -115,9 +117,9 @@ def draw_mean_var(ts, xs_sde, xs_data, file, title):
     conf_data = std(xs_data) * 1.96
 
     fig, ax = plt.subplots()
-    ax.plot(ts, mean_sde, label="Latent SDE", color="green")
+    ax.plot(ts, mean_sde, label="Latent SDE", color="darkblue")
     ax.fill_between(
-        ts, (mean_sde - conf_sde), (mean_sde + conf_sde), color="green", alpha=0.1
+        ts, (mean_sde - conf_sde), (mean_sde + conf_sde), color="darkblue", alpha=0.1
     )
 
     ax.plot(ts, mean_data, label="Data", color="orange")
@@ -140,12 +142,12 @@ def draw_posterior_around_data(ts, xs_posterior, xs_datapoint, file, title):
     mean_posterior = mean(xs_posterior)
     conf_posterior = std(xs_posterior) * 1.96
 
-    ax.plot(ts, mean_posterior, label="Posterior", color="green")
+    ax.plot(ts, mean_posterior, label="Posterior", color="darkblue")
     ax.fill_between(
         ts,
         (mean_posterior - conf_posterior),
         (mean_posterior + conf_posterior),
-        color="green",
+        color="darkblue",
         alpha=0.1,
     )
     ax.plot(ts, xs_datapoint[:, 0, 0], label="Data", color="orange", linewidth=2.0)
@@ -160,7 +162,7 @@ def draw_posterior_around_data(ts, xs_posterior, xs_datapoint, file, title):
     plt.close()
 
 
-def tipping_rate(ts, xs):
+def tipping_rate_2(ts, xs):
     assert xs.size(dim=2) == 1
 
     tips_counted = torch.zeros_like(ts)
@@ -192,20 +194,38 @@ def tipping_rate(ts, xs):
     dt = ts[1] - ts[0]
     return tips_counted / (dt * (ts[-1] - ts[0]) * xs.size(dim=1))
 
+def kramers_moyal(ts, xs):
+    dt = ts[1] - ts[0]
+    kmc_for_each_batch = []
+    bin_space = (np.linspace(-3.0, 3.0, 500),)
+    for batch_i in range(xs.size(dim=1)):
+        current_timeseries = xs[:, batch_i, :]
+        kmc, edges = km(current_timeseries.numpy(), powers=2, bins=bin_space)
+        kmc = kmc / dt
+        kmc_for_each_batch.append(kmc)
+    avg_kmc = sum(kmc_for_each_batch) / len(kmc_for_each_batch)
+    return avg_kmc, bin_space[0]
 
-def draw_tipping(ts, xs_sde, xs_data, window_size, file, title):
-    tipping_data = (
-        tipping_rate(ts, xs_data).unfold(0, window_size, window_size).mean(dim=1)
+def draw_kramers_moyal(ts, xs_sde, xs_data, window_size, file, title):
+    print("km data", kramers_moyal(ts, xs_data))
+    km_data, bin_space1 = (
+        kramers_moyal(ts, xs_data)
     )
-    tipping_sde = (
-        tipping_rate(ts, xs_sde).unfold(0, window_size, window_size).mean(dim=1)
+    km_sde, bin_space2 = (
+        kramers_moyal(ts, xs_sde)
     )
+    assert all(bin_space1 == bin_space2)
 
-    plt.plot(ts[::window_size], tipping_sde, color="green", label="Latent SDE")
-    plt.plot(ts[::window_size], tipping_data, color="orange", label="Data")
+    num_subplots = km_data.size(dim=0)
+    fig, axs = plt.subplots(num_subplots)
+    fig.set_size_inches(3, 6)
+    for i in range(num_subplots):
+        axs[i].plot(bin_space1[:-1], km_sde.numpy()[i, :], color="darkblue", label="Latent SDE")
+        axs[i].plot(bin_space2[:-1], km_data.numpy()[i, :], color="orange", label="Data")
+        axs[i].set_xlabel("y")
+        axs[i].set_ylabel(f"KM{i}")
     plt.legend()
-    plt.xlabel("Time $t$")
-    plt.ylabel("Tipping rate")
+    
     # plt.title(f"Observed tips, {title}")
     plt.tight_layout(pad=0.3)
     plt.savefig(file + extension)
@@ -230,7 +250,7 @@ def explore_diffusion_balance(latent_sde_old, xs, ts, dt, beta, out):
         log_pxss.append(-float(log_pxs))
         log_ratios.append(beta * float(log_ratio))
 
-    plt.plot(diffusion_sizes, log_pxss, color="green", label="negative Log-Probability")
+    plt.plot(diffusion_sizes, log_pxss, color="darkblue", label="negative Log-Probability")
     plt.plot(diffusion_sizes, log_ratios, color="orange", label="$\\beta \\cdot$ KL Divergence")
     plt.legend()
     plt.yscale("log")
@@ -334,12 +354,15 @@ def run_individual_analysis(model, data, training_info_file, config_file, show_p
             ts, posterior, datapoint, f"{out}/posterior_{name}", title
         )
 
-        draw_tipping(ts, xs_sde, xs_data, 5, f"{out}/tipping_{name}", title)
+        draw_kramers_moyal(ts, xs_sde, xs_data, 5, f"{out}/km_{name}", title)
 
         # explore_diffusion_balance(latent_sde, xs_data, ts, dt, config["beta"], f"{out}/diffusion_balance_{name}")
 
-        info_local["tipping_rate_data"] = float(tipping_rate(ts, xs_data).sum())
-        info_local["tipping_rate_sde"] = float(tipping_rate(ts, xs_sde).sum())
+        # TODO
+        # info_local["tipping_rate_data"] = float(tipping_rate(ts, xs_data).sum())
+        # info_local["tipping_rate_sde"] = float(tipping_rate(ts, xs_sde).sum())
+        info_local["tipping_rate_data"] = 0
+        info_local["tipping_rate_sde"] = 0
 
         info_local["bifurcation_data"] = bifurcation(xs_data)
         info_local["bifurcation_sde"] = bifurcation(xs_sde)
@@ -392,7 +415,7 @@ def draw_param_to_info_both(
     # and then choose second item
     tipping_rates_sde = list(zip(*tipping_rates_sde_sorted))[1]
     tipping_rates_data = list(zip(*tipping_rates_data_sorted))[1]
-    plt.plot(sorted_params, tipping_rates_sde, label="Latent SDE", color="green")
+    plt.plot(sorted_params, tipping_rates_sde, label="Latent SDE", color="darkblue")
     plt.plot(sorted_params, tipping_rates_data, label="Data", color="orange")
     plt.xlabel(param_title)
     plt.xscale(xscale)
@@ -444,7 +467,7 @@ def scatter_param_to_training_info(
     sorted_params = sorted(params)
 
     training_info_names = {
-        "kl": ("KL Divergence", "green"),
+        "kl": ("KL Divergence", "darkblue"),
         "logpxs": ("Log-Likelihood", "orange"),
         "noise": ("Diffusion Size", "blue"),
     }
@@ -696,7 +719,7 @@ def draw_func_ebm(func_sde, func_ebm, out, hardcoded_mean=0.0, hardcoded_std=0.0
 
     plt.subplots()
     plt.axhline(0, linestyle='--', color="black")
-    plt.plot(space, result_sde, label="Latent SDE", color="green")
+    plt.plot(space, result_sde, label="Latent SDE", color="darkblue")
     plt.plot(space, result_ebm, label="Noisy EBM", color="orange")
     plt.xlabel("$x$")
     plt.ylabel("$dx$")
