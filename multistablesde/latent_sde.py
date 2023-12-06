@@ -67,7 +67,7 @@ class Encoder(nn.Module):
 
 
 class LatentSDE(nn.Module):
-    sde_type = "stratonovich"
+    sde_type = "ito"
     noise_type = "diagonal"
 
     def __init__(
@@ -147,7 +147,7 @@ class LatentSDE(nn.Module):
         out = [g_net_i(y_i) for (g_net_i, y_i) in zip(self.g_nets, y)]
         return torch.cat(out, dim=1)
 
-    def forward(self, xs, ts, noise_std, adjoint=False, method="euler_heun", dt=None):
+    def forward(self, xs, ts, noise_std, adjoint=False, method="euler", dt=None):
         # Contextualization is only needed for posterior inference.
         ctx = self.encoder(torch.flip(xs, dims=(0,)))
         ctx = torch.flip(ctx, dims=(0,))
@@ -211,7 +211,7 @@ class LatentSDE(nn.Module):
         return _xs
 
     @torch.no_grad()
-    def posterior_plot(self, xs, ts, dt=None, adjoint=False, method="euler_heun"):
+    def posterior_plot(self, xs, ts, dt=None, adjoint=False, method="euler"):
         # Contextualization is only needed for posterior inference.
         ctx = self.encoder(torch.flip(xs, dims=(0,)))
         ctx = torch.flip(ctx, dims=(0,))
@@ -280,7 +280,7 @@ def make_dataset(
     )
     torch.manual_seed(48123)
     xs_extrapolated, mean, std = model.sample(
-        batch_size, ts_extrapolated.to(device), normalize=True, device=device, bm=bm
+        batch_size, ts_extrapolated.to(device), normalize=False, device=device, bm=bm
     )
     torch.seed()
     xs_train = xs_extrapolated[0:steps_train, :, :]
@@ -405,7 +405,7 @@ def main(
     noise_std=0.01,
     adjoint=False,
     train_dir="./dump/" + str(time.time_ns()),
-    method="euler_heun",
+    method="euler",
     viz_samples=30,
     beta=1.0,
     dt=0.01,

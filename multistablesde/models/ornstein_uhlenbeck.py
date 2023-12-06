@@ -22,11 +22,9 @@ class OrnsteinUhlenbeck(object):
     def sample(self, batch_size, ts, normalize, device, bm=None):
         x0 = (torch.randn(batch_size, 1) * 0.1 + 0.5).to(device)
         xs = torchsde.sdeint(self, x0, ts, bm=bm)
+        mean, std = torch.mean(xs[0, :, :], dim=(0, 1)), torch.std(
+            xs[0, :, :], dim=(0, 1)
+        )
         if normalize:
-            mean, std = torch.mean(xs[0, :, :], dim=(0, 1)), torch.std(
-                xs[0, :, :], dim=(0, 1)
-            )
             xs.sub_(mean).div_(std)
-            return xs, mean, std
-        else:
-            return xs
+        return xs, mean, std
