@@ -245,7 +245,7 @@ def explore_diffusion_balance(latent_sde_old, xs, ts, dt, beta, out):
             return result
         latent_sde.g = g
         log_pxs, log_ratio, noise = latent_sde(
-            xs, ts, 0.01, adjoint=False, method="euler_heun", dt=dt
+            xs, ts, 0.01, adjoint=False, method="euler", dt=dt
         )
         log_pxss.append(-float(log_pxs))
         log_ratios.append(beta * float(log_ratio))
