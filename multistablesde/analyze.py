@@ -162,7 +162,44 @@ def draw_posterior_around_data(ts, xs_posterior, xs_datapoint, file, title):
     plt.close()
 
 
-def tipping_rate_2(ts, xs):
+def kramers_moyal(ts, xs):
+    dt = ts[1] - ts[0]
+    kmc_for_each_batch = []
+    bin_space = (np.linspace(-3.0, 3.0, 500),)
+    for batch_i in range(xs.size(dim=1)):
+        current_timeseries = xs[:, batch_i, :]
+        kmc, edges = km(current_timeseries.numpy(), powers=2, bins=bin_space)
+        kmc = kmc / dt
+        kmc_for_each_batch.append(kmc)
+    avg_kmc = sum(kmc_for_each_batch) / len(kmc_for_each_batch)
+    return avg_kmc, bin_space[0]
+
+def draw_kramers_moyal(ts, xs_sde, xs_data, file, title):
+    km_data, bin_space1 = (
+        kramers_moyal(ts, xs_data)
+    )
+    km_sde, bin_space2 = (
+        kramers_moyal(ts, xs_sde)
+    )
+    assert all(bin_space1 == bin_space2)
+
+    num_subplots = km_data.size(dim=0)
+    fig, axs = plt.subplots(num_subplots)
+    fig.set_size_inches(3, 6)
+    for i in range(num_subplots):
+        axs[i].plot(bin_space1[:-1], km_sde.numpy()[i, :], color="darkblue", label="Latent SDE")
+        axs[i].plot(bin_space2[:-1], km_data.numpy()[i, :], color="orange", label="Data")
+        axs[i].set_xlabel("y")
+        axs[i].set_ylabel(f"KM{i}")
+    plt.legend()
+    
+    plt.title(f"KM factors, {title}")
+    plt.tight_layout(pad=0.3)
+    plt.savefig(file + extension)
+    plt.close()
+
+
+def tipping_rate(ts, xs):
     assert xs.size(dim=2) == 1
 
     tips_counted = torch.zeros_like(ts)
@@ -194,42 +231,24 @@ def tipping_rate_2(ts, xs):
     dt = ts[1] - ts[0]
     return tips_counted / (dt * (ts[-1] - ts[0]) * xs.size(dim=1))
 
-def kramers_moyal(ts, xs):
-    dt = ts[1] - ts[0]
-    kmc_for_each_batch = []
-    bin_space = (np.linspace(-3.0, 3.0, 500),)
-    for batch_i in range(xs.size(dim=1)):
-        current_timeseries = xs[:, batch_i, :]
-        kmc, edges = km(current_timeseries.numpy(), powers=2, bins=bin_space)
-        kmc = kmc / dt
-        kmc_for_each_batch.append(kmc)
-    avg_kmc = sum(kmc_for_each_batch) / len(kmc_for_each_batch)
-    return avg_kmc, bin_space[0]
-
-def draw_kramers_moyal(ts, xs_sde, xs_data, window_size, file, title):
-    print("km data", kramers_moyal(ts, xs_data))
-    km_data, bin_space1 = (
-        kramers_moyal(ts, xs_data)
+def draw_tipping(ts, xs_sde, xs_data, window_size, file, title):
+    tipping_data = (
+        tipping_rate(ts, xs_data).unfold(0, window_size, window_size).mean(dim=1)
     )
-    km_sde, bin_space2 = (
-        kramers_moyal(ts, xs_sde)
+    tipping_sde = (
+        tipping_rate(ts, xs_sde).unfold(0, window_size, window_size).mean(dim=1)
     )
-    assert all(bin_space1 == bin_space2)
 
-    num_subplots = km_data.size(dim=0)
-    fig, axs = plt.subplots(num_subplots)
-    fig.set_size_inches(3, 6)
-    for i in range(num_subplots):
-        axs[i].plot(bin_space1[:-1], km_sde.numpy()[i, :], color="darkblue", label="Latent SDE")
-        axs[i].plot(bin_space2[:-1], km_data.numpy()[i, :], color="orange", label="Data")
-        axs[i].set_xlabel("y")
-        axs[i].set_ylabel(f"KM{i}")
+    plt.plot(ts[::window_size], tipping_sde, color="green", label="Latent SDE")
+    plt.plot(ts[::window_size], tipping_data, color="orange", label="Data")
     plt.legend()
-    
+    plt.xlabel("Time $t$")
+    plt.ylabel("Tipping rate")
     # plt.title(f"Observed tips, {title}")
     plt.tight_layout(pad=0.3)
     plt.savefig(file + extension)
     plt.close()
+
 
 
 def explore_diffusion_balance(latent_sde_old, xs, ts, dt, beta, out):
@@ -354,15 +373,13 @@ def run_individual_analysis(model, data, training_info_file, config_file, show_p
             ts, posterior, datapoint, f"{out}/posterior_{name}", title
         )
 
-        draw_kramers_moyal(ts, xs_sde, xs_data, 5, f"{out}/km_{name}", title)
+        draw_kramers_moyal(ts, xs_sde, xs_data, f"{out}/km_{name}", title)
+        draw_tipping(ts, xs_sde, xs_data, 5, f"{out}/tipping_{name}", title)
 
         # explore_diffusion_balance(latent_sde, xs_data, ts, dt, config["beta"], f"{out}/diffusion_balance_{name}")
 
-        # TODO
-        # info_local["tipping_rate_data"] = float(tipping_rate(ts, xs_data).sum())
-        # info_local["tipping_rate_sde"] = float(tipping_rate(ts, xs_sde).sum())
-        info_local["tipping_rate_data"] = 0
-        info_local["tipping_rate_sde"] = 0
+        info_local["tipping_rate_data"] = float(tipping_rate(ts, xs_data).sum())
+        info_local["tipping_rate_sde"] = float(tipping_rate(ts, xs_sde).sum())
 
         info_local["bifurcation_data"] = bifurcation(xs_data)
         info_local["bifurcation_sde"] = bifurcation(xs_sde)
