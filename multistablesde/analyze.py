@@ -46,7 +46,7 @@ def draw_marginals(xs_sde, xs_data, file, title):
         label="Latent SDE",
         edgecolor="black",
         color="darkblue",
-        linewidth=1.2,
+        linewidth=0.2,
     )
     plt.hist(
         torch.flatten(xs_data).numpy(),
@@ -55,7 +55,7 @@ def draw_marginals(xs_sde, xs_data, file, title):
         label="Data",
         edgecolor="black",
         color="orange",
-        linewidth=1.2,
+        linewidth=0.2,
     )
     plt.legend()
     # plt.title(f"Marginals, {title}")
