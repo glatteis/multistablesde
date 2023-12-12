@@ -186,7 +186,7 @@ def draw_kramers_moyal(ts, xs_sde, xs_data, file, title):
     num_subplots = km_data.size(dim=0)
     fig, axs = plt.subplots(num_subplots)
     fig.set_size_inches(3, 6)
-    for i in range(num_subplots):
+    for i in range(1, num_subplots):
         axs[i].plot(bin_space1[:-1], km_sde.numpy()[i, :], color="darkblue", label="Latent SDE")
         axs[i].plot(bin_space2[:-1], km_data.numpy()[i, :], color="orange", label="Data")
         axs[i].set_xlabel("y")
@@ -465,7 +465,7 @@ def draw_param_to_info(
     infos_sorted = sorted(zip(params, [x[ts][info_name] for x in infos]))
     # and then choose second item
     info_values = list(zip(*infos_sorted))[1]
-    plt.plot(sorted_params, info_values, label=ts_title)
+    plt.scatter(sorted_params, info_values, label=ts_title)
     plt.xlabel(param_title)
     plt.xscale(xscale)
     plt.yscale(yscale)
