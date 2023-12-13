@@ -28,11 +28,11 @@ from latent_sde import *
 
 interval_names = {
     "0_firsthalftrain": "$(0, 0.5{t_{train}})$",
-    "1_secondhalftrain": "$(0.5{t_{train}}, t_{train})$",
+    "1_secondhalftrain": "Training Set",
     "2_train": "$(0, t_{train})$",
     "3_doubletrain": "$(0, 2 t_{train})$",
     "4_fivetrain": "$(0, 5 t_{train})$",
-    "5_extrapolation": "$(t_{train}, 5 t_{train})$",
+    "5_extrapolation": "Test Set",
 }
 
 def draw_marginals(xs_sde, xs_data, file, title):
@@ -187,10 +187,10 @@ def draw_kramers_moyal(ts, xs_sde, xs_data, file, title):
     fig, axs = plt.subplots(num_subplots)
     fig.set_size_inches(3, 6)
     for i in range(1, num_subplots):
-        axs[i].plot(bin_space1[:-1], km_sde.numpy()[i, :], color="darkblue", label="Latent SDE")
-        axs[i].plot(bin_space2[:-1], km_data.numpy()[i, :], color="orange", label="Data")
-        axs[i].set_xlabel("y")
-        axs[i].set_ylabel(f"KM{i}")
+        axs[i - 1].plot(bin_space1[:-1], km_sde.numpy()[i, :], color="darkblue", label="Latent SDE")
+        axs[i - 1].plot(bin_space2[:-1], km_data.numpy()[i, :], color="orange", label="Data")
+        axs[i - 1].set_xlabel("y")
+        axs[i - 1].set_ylabel(f"KM{i}")
     plt.legend()
     
     plt.title(f"KM factors, {title}")
@@ -313,7 +313,7 @@ def run_individual_analysis(model, data, training_info_file, config_file, show_p
     # just for the custom models because we did experiments on them, it's just
     # more convenient to plot that here even though it's not very general
     if latent_sde.pz0_mean.shape[1:][0] == 1 and "mean" in tsxs_data:
-        ebm = StochasticEnergyBalance()
+        ebm = ConstantStochasticEnergyBalance()
         ebm.noise_var = 0.135
         def corrected_f(t, x):
             return ebm.f(t, x) + 0.5 * (ebm.noise_var)**2 * x
@@ -383,6 +383,15 @@ def run_individual_analysis(model, data, training_info_file, config_file, show_p
 
         info_local["bifurcation_data"] = bifurcation(xs_data)
         info_local["bifurcation_sde"] = bifurcation(xs_sde)
+
+        km_sde, binspace_sde = kramers_moyal(ts, xs_sde)
+        km_data, binspace_data = kramers_moyal(ts, xs_data)
+        assert all(binspace_data == binspace_sde)
+        info_local["km_binspace"] = list(binspace_sde)
+        info_local["km_sde_drift"] = list(km_sde.numpy()[1, :])
+        info_local["km_sde_diffusion"] = list(km_sde.numpy()[2, :])
+        info_local["km_data_drift"] = list(km_data.numpy()[1, :])
+        info_local["km_data_diffusion"] = list(km_data.numpy()[2, :])
 
         info[name] = info_local
 
@@ -654,14 +663,46 @@ def run_summary_analysis(model_folders, out):
                 xscale=xscale,
                 save=False,
             )
+        
         plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
         plt.tight_layout(pad=0.3)
 
         plt.savefig(f"{out}/custom_tipping" + extension)
         plt.close()
 
-        plt.rcParams["figure.figsize"] = old_figsize
 
+
+        plt.rcParams["figure.figsize"] = (2.8, 1.8*2)
+
+        # Custom KM factors plot
+        for ts in timespans:
+            # Plot that for these values
+            chosen_param_values = [0, 200]
+            if not all([x in params for x in chosen_param_values]):
+                break
+            chosen_param_indices = [params.index(x) for x in chosen_param_values]
+
+            fig, axs = plt.subplots(2)
+
+            print(infos[chosen_param_indices[0]][ts].keys())
+            axs[0].plot(infos[chosen_param_indices[0]][ts]["km_data_drift"], label="Data")
+            for i in chosen_param_indices:
+                axs[0].plot(infos[chosen_param_indices[i]][ts]["km_sde_drift"], label=f"$\\gamma = {chosen_param_values[i]}$")
+            
+
+            axs[1].plot(infos[chosen_param_indices[0]][ts]["km_data_diffusion"], label="Data")
+            for i in chosen_param_indices:
+                axs[1].plot(infos[chosen_param_indices[i]][ts]["km_sde_diffusion"], label=f"$\\gamma = {chosen_param_values[i]}$")
+            
+            for ax in axs:
+                ax.set_xlabel("x")
+                ax.set_ylabel("dx")
+            plt.legend()
+            plt.tight_layout(pad=0.3)
+            plt.savefig(f"{out}/kramersmoyal_{param_name}_{ts}" + extension)
+            plt.close()
+
+        plt.rcParams["figure.figsize"] = old_figsize
         scatter_param_to_training_info(
             configs, training_infos, param_name, param_title, out, xscale=xscale
         )
