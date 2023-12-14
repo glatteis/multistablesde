@@ -682,19 +682,20 @@ def run_summary_analysis(model_folders, out):
             fig, axs = plt.subplots(1, 2)
 
             print(infos[chosen_param_indices[0]][ts].keys())
-            axs[0, 0].plot(infos[chosen_param_indices[0]][ts]["km_data_drift"], label="Data")
+            axs[0].plot(infos[chosen_param_indices[0]][ts]["km_data_drift"], label="Data")
             for i in chosen_param_indices:
-                axs[0, 0].plot(infos[i][ts]["km_sde_drift"], label=f"$\\gamma = {params[i]}$")
+                axs[0].plot(infos[i][ts]["km_sde_drift"], label=f"$\\gamma = {params[i]}$")
             
 
-            axs[0, 1].plot(infos[chosen_param_indices[0]][ts]["km_data_diffusion"], label="Data")
+            axs[1].plot(infos[chosen_param_indices[0]][ts]["km_data_diffusion"], label="Data")
             for i in chosen_param_indices:
-                axs[0, 1].plot(infos[i][ts]["km_sde_diffusion"], label=f"$\\gamma = {params[i]}$")
+                axs[1].plot(infos[i][ts]["km_sde_diffusion"], label=f"$\\gamma = {params[i]}$")
             
             for ax in axs:
                 ax.set_xlabel("x")
                 ax.set_ylabel("dx")
-            plt.legend()
+            plt.legend(bbox_to_anchor=(1.04, 1), loc="center left")
+
             plt.tight_layout()
             plt.savefig(f"{out}/kramersmoyal_{param_name}_{ts}" + extension)
             plt.close()
