@@ -314,7 +314,6 @@ def run_individual_analysis(model, data, training_info_file, config_file, show_p
     # more convenient to plot that here even though it's not very general
     if latent_sde.pz0_mean.shape[1:][0] == 1 and "mean" in tsxs_data:
         ebm = ConstantStochasticEnergyBalance()
-        ebm.noise_var = 0.135
         def corrected_f(t, x):
             return ebm.f(t, x) + 0.5 * (ebm.noise_var)**2 * x
         mean = tsxs_data["mean"]
