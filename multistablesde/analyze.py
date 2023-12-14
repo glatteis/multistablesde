@@ -673,32 +673,33 @@ def run_summary_analysis(model_folders, out):
 
         # Custom KM factors plot
         for ts in timespans:
-            # Plot that for these values
-            chosen_param_values = [0, 200]
-            if not all([x in params for x in chosen_param_values]):
-                break
-            chosen_param_indices = [params.index(x) for x in chosen_param_values]
+            for param_value in params:
+                # Plot that for these values
+                chosen_param_values = [0, param_value]
+                if not all([x in params for x in chosen_param_values]):
+                    break
+                chosen_param_indices = [params.index(x) for x in chosen_param_values]
 
-            fig, axs = plt.subplots(1, 2)
+                fig, axs = plt.subplots(1, 2)
 
-            print(infos[chosen_param_indices[0]][ts].keys())
-            axs[0].plot(infos[chosen_param_indices[0]][ts]["km_data_drift"], label="Data")
-            for i in chosen_param_indices:
-                axs[0].plot(infos[i][ts]["km_sde_drift"], label=f"$\\gamma = {params[i]}$")
-            
+                print(infos[chosen_param_indices[0]][ts].keys())
+                axs[0].plot(infos[chosen_param_indices[0]][ts]["km_data_drift"], label="Data")
+                for i in chosen_param_indices:
+                    axs[0].plot(infos[i][ts]["km_sde_drift"], label=f"$\\gamma = {params[i]}$")
+                
 
-            axs[1].plot(infos[chosen_param_indices[0]][ts]["km_data_diffusion"], label="Data")
-            for i in chosen_param_indices:
-                axs[1].plot(infos[i][ts]["km_sde_diffusion"], label=f"$\\gamma = {params[i]}$")
-            
-            for ax in axs:
-                ax.set_xlabel("x")
-                ax.set_ylabel("dx")
-            plt.legend(bbox_to_anchor=(1.04, 1), loc="center left")
+                axs[1].plot(infos[chosen_param_indices[0]][ts]["km_data_diffusion"], label="Data")
+                for i in chosen_param_indices:
+                    axs[1].plot(infos[i][ts]["km_sde_diffusion"], label=f"$\\gamma = {params[i]}$")
+                
+                for ax in axs:
+                    ax.set_xlabel("x")
+                    ax.set_ylabel("dx")
+                plt.legend(bbox_to_anchor=(1.04, 1), loc="center left")
 
-            plt.tight_layout()
-            plt.savefig(f"{out}/kramersmoyal_{param_name}_{ts}" + extension)
-            plt.close()
+                plt.tight_layout()
+                plt.savefig(f"{out}/kramersmoyal_{param_name}_{param_value}_{ts}" + extension)
+                plt.close()
 
         plt.rcParams["figure.figsize"] = old_figsize
         scatter_param_to_training_info(
