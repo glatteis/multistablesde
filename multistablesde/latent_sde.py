@@ -433,7 +433,7 @@ def main(
         "ornstein": OrnsteinUhlenbeck(),
     }
     model_obj = models[model]
-    if isinstance(model_obj, StochasticEnergyBalance) and data_noise_level is not None:
+    if (isinstance(model_obj, StochasticEnergyBalance) or isinstance(model_obj, ConstantStochasticEnergyBalance)) and data_noise_level is not None:
         model_obj.noise_var = data_noise_level
 
     sys.setrecursionlimit(1500)
