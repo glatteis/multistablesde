@@ -375,7 +375,7 @@ def run_individual_analysis(model, data, training_info_file, config_file, show_p
         draw_kramers_moyal(ts, xs_sde, xs_data, f"{out}/km_{name}", title)
         draw_tipping(ts, xs_sde, xs_data, 5, f"{out}/tipping_{name}", title)
 
-        # explore_diffusion_balance(latent_sde, xs_data, ts, dt, config["beta"], f"{out}/diffusion_balance_{name}")
+        explore_diffusion_balance(latent_sde, xs_data, ts, dt, config["beta"], f"{out}/diffusion_balance_{name}")
 
         info_local["tipping_rate_data"] = float(tipping_rate(ts, xs_data).sum())
         info_local["tipping_rate_sde"] = float(tipping_rate(ts, xs_sde).sum())
@@ -473,7 +473,7 @@ def draw_param_to_info(
     infos_sorted = sorted(zip(params, [x[ts][info_name] for x in infos]))
     # and then choose second item
     info_values = list(zip(*infos_sorted))[1]
-    plt.scatter(sorted_params, info_values, label=ts_title)
+    plt.plot(sorted_params, info_values, label=ts_title)
     plt.xlabel(param_title)
     plt.xscale(xscale)
     plt.yscale(yscale)
