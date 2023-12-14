@@ -314,12 +314,10 @@ def run_individual_analysis(model, data, training_info_file, config_file, show_p
     # more convenient to plot that here even though it's not very general
     if latent_sde.pz0_mean.shape[1:][0] == 1 and "mean" in tsxs_data:
         ebm = ConstantStochasticEnergyBalance()
-        def corrected_f(t, x):
-            return ebm.f(t, x) + 0.5 * (ebm.noise_var)**2 * x
         mean = tsxs_data["mean"]
         std = tsxs_data["std"]
         print(mean, std)
-        draw_func_ebm(latent_sde.h, corrected_f, f"{out}/func_drift", hardcoded_mean=mean, hardcoded_std=std)
+        draw_func_ebm(latent_sde.h, ebm.f, f"{out}/func_drift", hardcoded_mean=mean, hardcoded_std=std)
         draw_func_ebm(latent_sde.g, ebm.g, f"{out}/func_diffusion", hardcoded_mean=mean, hardcoded_std=std)
     elif latent_sde.pz0_mean.shape[1:][0] == 2:
         t1 = float(ts_extrapolated[-1])
