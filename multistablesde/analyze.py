@@ -693,11 +693,11 @@ def run_summary_analysis(model_folders, out):
                     axs[1].plot(infos[i][ts]["km_sde_diffusion"], label=f"$\\gamma = {params[i]}$")
                 
                 for ax in axs:
-                    ax.set_xlabel("x")
-                    ax.set_ylabel("dx")
+                    ax.set_xlabel("$x$")
+                    ax.set_ylabel("$dx$")
                 plt.legend(bbox_to_anchor=(1.04, 1), loc="center left")
 
-                plt.tight_layout()
+                plt.tight_layout(pad=0.3)
                 plt.savefig(f"{out}/kramersmoyal_{param_name}_{param_value}_{ts}" + extension)
                 plt.close()
 
