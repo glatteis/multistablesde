@@ -11,6 +11,10 @@ variable_args=(
     "--noise-penalty=300"
     "--noise-penalty=350"
     "--noise-penalty=400"
+    "--noise-penalty=450"
+    "--noise-penalty=500"
+    "--noise-penalty=550"
+    "--noise-penalty=600"
 )
 
 srun python3 -m pipenv run python $fixed_args ${variable_args[$SLURM_ARRAY_TASK_ID]} --train-dir $1
