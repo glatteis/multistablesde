@@ -26,6 +26,21 @@ import torchsde
 # Wildcard import so that imported files find all classes
 from latent_sde import *
 
+from string import ascii_lowercase
+
+current_marker = 0
+markers = ["^", "v", "<", ">"]
+
+def next_marker():
+    global current_marker
+    return_marker = current_marker
+    current_marker = (current_marker + 1) % len(markers)
+    return markers[return_marker]
+
+def reset_marker():
+    global current_marker
+    current_marker = 0
+
 interval_names = {
     "0_firsthalftrain": "$(0, 0.5{t_{train}})$",
     "1_secondhalftrain": "Training Set",
@@ -426,6 +441,7 @@ def draw_param_to_info_both(
     out,
     xscale="linear",
 ):
+    reset_marker()
     params = [x[param_name] for x in configs]
     sorted_params = sorted(params)
     # sort by the param, so first zip...
@@ -438,8 +454,8 @@ def draw_param_to_info_both(
     # and then choose second item
     tipping_rates_sde = list(zip(*tipping_rates_sde_sorted))[1]
     tipping_rates_data = list(zip(*tipping_rates_data_sorted))[1]
-    plt.plot(sorted_params, tipping_rates_sde, label="Latent SDE", color="darkblue")
-    plt.plot(sorted_params, tipping_rates_data, label="Data", color="orange")
+    plt.scatter(sorted_params, tipping_rates_sde, label="Latent SDE", color="darkblue", marker=next_marker())
+    plt.scatter(sorted_params, tipping_rates_data, label="Data", color="orange", marker=next_marker())
     plt.xlabel(param_title)
     plt.xscale(xscale)
     plt.ylabel(info_title)
@@ -471,7 +487,7 @@ def draw_param_to_info(
     infos_sorted = sorted(zip(params, [x[ts][info_name] for x in infos]))
     # and then choose second item
     info_values = list(zip(*infos_sorted))[1]
-    plt.plot(sorted_params, info_values, label=ts_title)
+    plt.scatter(sorted_params, info_values, label=ts_title, marker=next_marker())
     plt.xlabel(param_title)
     plt.xscale(xscale)
     plt.yscale(yscale)
@@ -486,6 +502,7 @@ def draw_param_to_info(
 def scatter_param_to_training_info(
     configs, training_infos, param_name, param_title, out, xscale="linear"
 ):
+    reset_marker()
     params = [x[param_name] for x in configs]
     sorted_params = sorted(params)
 
@@ -508,7 +525,7 @@ def scatter_param_to_training_info(
         )
         # and then choose second item
         info_values = list(zip(*infos_sorted))[1]
-        plt.plot(sorted_params, info_values, color=color)
+        plt.scatter(sorted_params, info_values, color=color, marker=next_marker())
         # plt.title(f"{param_title} to {training_info_title}")
         plt.xlabel(param_title)
         plt.ylabel(training_info_title)
@@ -612,6 +629,7 @@ def run_summary_analysis(model_folders, out):
         old_figsize = plt.rcParams["figure.figsize"]
         plt.rcParams["figure.figsize"] = (5, 1.8)
         # custom wasserstein distance plot
+        reset_marker()
         for ts in ["1_secondhalftrain", "5_extrapolation"]:
             draw_param_to_info(
                 configs,
@@ -627,12 +645,13 @@ def run_summary_analysis(model_folders, out):
                 yscale="log",
                 save=False,
             )
+        plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
         plt.tight_layout(pad=0.3)
-        plt.legend()
         plt.savefig(f"{out}/custom_wasserstein" + extension)
         plt.close()
 
         # custom tipping rate plot
+        reset_marker()
         for ts in ["1_secondhalftrain", "5_extrapolation"]:
             draw_param_to_info(
                 configs,
@@ -647,6 +666,7 @@ def run_summary_analysis(model_folders, out):
                 xscale=xscale,
                 save=False,
             )
+        for ts in ["1_secondhalftrain", "5_extrapolation"]:
             draw_param_to_info(
                 configs,
                 infos,
